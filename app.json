@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "LRS Tracker",
+    "slug": "lrs-tracker-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "scheme": "lrstracker",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.lrstracker.mobile"
+    },
+    "android": {
+      "package": "com.lrstracker.mobile"
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
