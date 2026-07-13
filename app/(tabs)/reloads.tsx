@@ -39,6 +39,9 @@ export default function Reloads() {
           placeholder="Search loads…"
           placeholderTextColor={C.muted}
         />
+        <TouchableOpacity onPress={() => router.push('/import' as any)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <Ionicons name="download-outline" size={18} color={C.accent} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView
