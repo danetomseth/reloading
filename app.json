@@ -35,6 +35,13 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "d4f1fdd4-cca5-43ea-a090-bcb0a1fc64c9"
+      }
+    },
+    "owner": "danetomseth"
   }
 }
