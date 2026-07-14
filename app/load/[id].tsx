@@ -3,6 +3,8 @@ import { View, Text, ScrollView, TextInput, TouchableOpacity, StyleSheet, Alert,
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { db, Load, Rifle, uid } from '../../lib/supabase';
 import { C, commonStyles } from '../../lib/theme';
+import { PowderInput, BulletLibrary } from '../../components/ReloadPickers';
+import { diameterLabel } from '../../lib/reloadData';
 
 type CS = { id: string; date: string; temp: string; distance: string; velocity: string; sd: string; es: string; group_size: string };
 
@@ -95,11 +97,22 @@ export default function LoadDetail() {
         </View>
 
         <Text style={commonStyles.sectionTitle}>Components</Text>
+        <BulletLibrary
+          caliber={form.caliber}
+          onPick={b => setForm(prev => ({
+            ...prev,
+            bullet: `${b.mfr} ${b.model}`,
+            bullet_wt: String(b.weight),
+            bullet_bc: b.bcG1 != null ? String(b.bcG1) : prev.bullet_bc,
+            caliber: prev.caliber || diameterLabel(b.diameter),
+            overall_coal: b.col != null ? String(b.col) : prev.overall_coal,
+          }))}
+        />
         {inp('caliber', 'Caliber')}
         {inp('bullet', 'Bullet')}
         {inp('bullet_wt', 'Bullet Weight (gr)')}
         {inp('bullet_bc', 'BC')}
-        {inp('powder', 'Powder')}
+        <PowderInput value={form.powder || ''} onChange={v => f('powder', v)} />
         {inp('charge', 'Charge (gr)')}
         {inp('primer', 'Primer')}
         {inp('brass', 'Brass')}

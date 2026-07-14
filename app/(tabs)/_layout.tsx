@@ -1,8 +1,15 @@
 import { Tabs } from 'expo-router';
+import { TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { supabase } from '../../lib/supabase';
 import { C } from '../../lib/theme';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
+
+const signOut = () => Alert.alert('Sign out', 'Sign out of your account?', [
+  { text: 'Cancel', style: 'cancel' },
+  { text: 'Sign out', style: 'destructive', onPress: () => { supabase.auth.signOut(); } },
+]);
 
 const tabs: { name: string; title: string; icon: IconName }[] = [
   { name: 'index',      title: 'Home',       icon: 'home-outline' },
@@ -24,6 +31,11 @@ export default function TabLayout() {
         headerStyle: { backgroundColor: C.surface },
         headerTintColor: C.text,
         headerTitleStyle: { fontWeight: '700' },
+        headerRight: () => (
+          <TouchableOpacity onPress={signOut} style={{ marginRight: 16 }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <Ionicons name="log-out-outline" size={22} color={C.textSoft} />
+          </TouchableOpacity>
+        ),
       }}
     >
       {tabs.map(t => (
