@@ -1,21 +1,22 @@
 import { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Switch } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
-import { db, Load, Rifle, uid } from '../../lib/supabase';
+import { db, Load, Rifle, uid, genLoadId } from '../../lib/supabase';
 import { C, commonStyles } from '../../lib/theme';
 import { PowderInput, BulletLibrary } from '../../components/ReloadPickers';
 import { diameterLabel } from '../../lib/reloadData';
 
 type CS = { id: string; date: string; temp: string; distance: string; velocity: string; sd: string; es: string; group_size: string };
+type Step = { id: string; charge: string; velocity: string; group_size: string };
 
 const emptyLoad = (): Partial<Load> => ({
-  id: uid(), date: new Date().toISOString().slice(0, 10), rifle: '', caliber: '',
+  id: uid(), load_id: genLoadId(), date: new Date().toISOString().slice(0, 10), rifle: '', caliber: '',
   bullet: '', bullet_wt: '', bullet_bc: '', powder: '', charge: '', primer: '',
   brass: '', brass_fires: '', trim_len: '', overall_coal: '', headspace_coal: '',
   max_overall_coal: '', max_headspace_coal: '', neck_tension: '', lot_number: '',
   velocity: '', sd: '', es: '', group_size: '', distance: '', status: 'testing',
   tumbled: 0, ultrasonic: 0, fl_sized: 0, neck_sized: 0, case_trimmed: 0,
-  chrono_sessions: '', notes: '',
+  chrono_sessions: '', ladder: '', notes: '',
 });
 
 export default function LoadDetail() {
@@ -24,9 +25,11 @@ export default function LoadDetail() {
   const isNew   = id === 'new';
   const [form,    setForm]    = useState<Partial<Load>>(emptyLoad());
   const [rifles,  setRifles]  = useState<Rifle[]>([]);
-  const [cs,      setCs]      = useState<CS[]>([]);
-  const [loading, setLoading] = useState(!isNew);
-  const [saving,  setSaving]  = useState(false);
+  const [cs,       setCs]       = useState<CS[]>([]);
+  const [ladder,   setLadder]   = useState<Step[]>([]);
+  const [ladderOn, setLadderOn] = useState(false);
+  const [loading,  setLoading]  = useState(!isNew);
+  const [saving,   setSaving]   = useState(false);
 
   const f = (k: keyof Load, v: any) => setForm(p => ({ ...p, [k]: v }));
 
@@ -34,7 +37,11 @@ export default function LoadDetail() {
     db.rifles.getAll().then(({ data }) => setRifles(data || []));
     if (isNew) return;
     db.loads.get(id).then(({ data }) => {
-      if (data) { setForm(data); try { setCs(data.chrono_sessions ? JSON.parse(data.chrono_sessions) : []); } catch(e) {} }
+      if (data) {
+        setForm(data);
+        try { setCs(data.chrono_sessions ? JSON.parse(data.chrono_sessions) : []); } catch(e) {}
+        try { const lad = data.ladder ? JSON.parse(data.ladder) : []; setLadder(lad); setLadderOn(lad.length > 0); } catch(e) {}
+      }
       setLoading(false);
     });
   }, [id]);
@@ -42,8 +49,14 @@ export default function LoadDetail() {
   const save = async () => {
     setSaving(true);
     const now = new Date().toISOString();
-    await db.loads.upsert({ ...form, chrono_sessions: JSON.stringify(cs), updated_at: now, created_at: form.created_at || now });
+    const { error } = await db.loads.upsert({
+      ...form,
+      chrono_sessions: JSON.stringify(cs),
+      ladder: ladderOn ? JSON.stringify(ladder) : '',
+      updated_at: now, created_at: form.created_at || now,
+    });
     setSaving(false);
+    if (error) { Alert.alert('Save failed', error.message); return; }
     router.back();
   };
 
@@ -55,6 +68,14 @@ export default function LoadDetail() {
   const addCs = () => setCs(p => [...p, { id: uid(), date: new Date().toISOString().slice(0,10), temp: '', distance: '', velocity: '', sd: '', es: '', group_size: '' }]);
   const updCs = (sid: string, k: keyof CS, v: string) => setCs(p => p.map(s => s.id === sid ? { ...s, [k]: v } : s));
   const delCs = (sid: string) => setCs(p => p.filter(s => s.id !== sid));
+
+  const toggleLadder = (on: boolean) => {
+    setLadderOn(on);
+    if (on && ladder.length === 0) setLadder([{ id: uid(), charge: '', velocity: '', group_size: '' }]);
+  };
+  const addStep = () => setLadder(p => p.length >= 10 ? p : [...p, { id: uid(), charge: '', velocity: '', group_size: '' }]);
+  const updStep = (sid: string, k: keyof Step, v: string) => setLadder(p => p.map(s => s.id === sid ? { ...s, [k]: v } : s));
+  const delStep = (sid: string) => setLadder(p => p.filter(s => s.id !== sid));
 
   if (loading) return <View style={commonStyles.center}><ActivityIndicator color={C.accent} size="large" /></View>;
 
@@ -75,8 +96,11 @@ export default function LoadDetail() {
 
   return (
     <>
-      <Stack.Screen options={{ title: isNew ? 'New Load' : `${form.rifle || 'Load'} · ${form.lot_number || ''}` }} />
+      <Stack.Screen options={{ title: isNew ? 'New Load' : `${form.rifle || 'Load'} · ${form.load_id || form.lot_number || ''}` }} />
       <ScrollView style={commonStyles.screen} contentContainerStyle={commonStyles.content}>
+
+        <Text style={commonStyles.sectionTitle}>Load ID</Text>
+        {inp('load_id', 'Load ID', 'auto-generated')}
 
         <Text style={commonStyles.sectionTitle}>Rifle</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
@@ -139,6 +163,39 @@ export default function LoadDetail() {
         {inp('distance', 'Distance (yd)')}
 
         <View style={styles.csHeader}>
+          <Text style={commonStyles.sectionTitle}>Ladder Development</Text>
+          <Switch value={ladderOn} onValueChange={toggleLadder} trackColor={{ true: C.accent }} thumbColor={C.white} />
+        </View>
+        {ladderOn && (
+          <>
+            <View style={styles.ladderHead}>
+              <Text style={[styles.ladderH, { width: 24 }]}>#</Text>
+              <Text style={[styles.ladderH, { flex: 1 }]}>Charge gr</Text>
+              <Text style={[styles.ladderH, { flex: 1 }]}>Velocity</Text>
+              <Text style={[styles.ladderH, { flex: 1 }]}>Group in</Text>
+              <View style={{ width: 24 }} />
+            </View>
+            {ladder.map((s, i) => (
+              <View key={s.id} style={styles.ladderRow}>
+                <Text style={styles.stepNum}>{i + 1}</Text>
+                <TextInput style={styles.ladderInput} value={s.charge} onChangeText={v => updStep(s.id, 'charge', v)}
+                  placeholder="—" placeholderTextColor={C.muted} keyboardType="decimal-pad" />
+                <TextInput style={styles.ladderInput} value={s.velocity} onChangeText={v => updStep(s.id, 'velocity', v)}
+                  placeholder="—" placeholderTextColor={C.muted} keyboardType="number-pad" />
+                <TextInput style={styles.ladderInput} value={s.group_size} onChangeText={v => updStep(s.id, 'group_size', v)}
+                  placeholder="—" placeholderTextColor={C.muted} keyboardType="decimal-pad" />
+                <TouchableOpacity style={styles.stepDel} onPress={() => delStep(s.id)}><Text style={styles.csDelete}>✕</Text></TouchableOpacity>
+              </View>
+            ))}
+            {ladder.length < 10 && (
+              <TouchableOpacity style={styles.addBtnFull} onPress={addStep}>
+                <Text style={styles.addBtnText}>+ Add charge  ({ladder.length}/10)</Text>
+              </TouchableOpacity>
+            )}
+          </>
+        )}
+
+        <View style={styles.csHeader}>
           <Text style={commonStyles.sectionTitle}>Chrono Sessions</Text>
           <TouchableOpacity style={styles.addBtn} onPress={addCs}>
             <Text style={styles.addBtnText}>+ Add</Text>
@@ -198,4 +255,11 @@ const styles = StyleSheet.create({
   csTitle:      { fontSize: 13, fontWeight: '700', color: C.accent },
   csDelete:     { color: C.red, fontSize: 16, fontWeight: '700' },
   textarea:     { height: 100, textAlignVertical: 'top' },
+  ladderHead:   { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4, marginTop: 2 },
+  ladderH:      { color: C.muted, fontSize: 9, fontWeight: '700', letterSpacing: 0.4, textTransform: 'uppercase', textAlign: 'center' },
+  ladderRow:    { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },
+  stepNum:      { width: 24, textAlign: 'center', color: C.accent, fontWeight: '700', fontSize: 13 },
+  ladderInput:  { flex: 1, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 6, color: C.text, fontSize: 14, paddingVertical: 9, paddingHorizontal: 6, textAlign: 'center' },
+  stepDel:      { width: 24, alignItems: 'center' },
+  addBtnFull:   { backgroundColor: C.green + '18', borderWidth: 1, borderColor: C.green, borderRadius: 6, padding: 11, alignItems: 'center', marginTop: 2, marginBottom: 6 },
 });

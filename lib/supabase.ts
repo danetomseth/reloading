@@ -37,6 +37,7 @@ export type Rifle = {
 
 export type Load = {
   id: string;
+  load_id?: string;
   date: string;
   rifle: string;
   caliber: string;
@@ -67,6 +68,7 @@ export type Load = {
   neck_sized: number;
   case_trimmed: number;
   chrono_sessions: string;
+  ladder?: string;
   notes: string;
   created_at?: string;
   updated_at?: string;
@@ -119,3 +121,11 @@ export const db = {
 
 export const uid = () =>
   Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+
+// short, human-readable auto Load ID, e.g. "250715-K7Q" (date + random)
+export const genLoadId = (): string => {
+  const d = new Date();
+  const stamp = `${String(d.getFullYear()).slice(2)}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+  const rand = Math.random().toString(36).slice(2, 5).toUpperCase();
+  return `${stamp}-${rand}`;
+};

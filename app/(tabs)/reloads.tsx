@@ -66,7 +66,9 @@ export default function Reloads() {
                 </View>
               </View>
               <View style={styles.tags}>
-                {l.lot_number ? <Text style={[styles.tag, { color: C.accent }]}>LOT {l.lot_number}</Text> : null}
+                {l.load_id ? <Text style={[styles.tag, { color: C.accent }]}>#{l.load_id}</Text> : null}
+                {l.lot_number ? <Text style={styles.tag}>LOT {l.lot_number}</Text> : null}
+                {l.ladder && l.ladder !== '[]' ? <Text style={[styles.tag, { color: C.purple }]}>📈 ladder</Text> : null}
                 {l.velocity   ? <Text style={[styles.tag, { color: C.green }]}>{l.velocity}fps</Text> : null}
                 {l.sd         ? <Text style={styles.tag}>SD {l.sd}</Text> : null}
                 {l.group_size ? <Text style={styles.tag}>🎯 {l.group_size}" @ {l.distance}yd</Text> : null}
