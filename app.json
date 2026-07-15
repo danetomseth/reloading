@@ -9,7 +9,10 @@
     "icon": "./assets/icon.png",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.lrstracker.mobile"
+      "bundleIdentifier": "com.lrstracker.mobile",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.lrstracker.mobile",
@@ -42,6 +45,12 @@
         "projectId": "d4f1fdd4-cca5-43ea-a090-bcb0a1fc64c9"
       }
     },
-    "owner": "danetomseth"
+    "owner": "danetomseth",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/d4f1fdd4-cca5-43ea-a090-bcb0a1fc64c9"
+    }
   }
 }
