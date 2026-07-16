@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Switch } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { db, Load, Rifle, uid, genLoadId } from '../../lib/supabase';
 import { C, commonStyles } from '../../lib/theme';
 import { PowderInput, BulletLibrary } from '../../components/ReloadPickers';
@@ -8,6 +9,12 @@ import { diameterLabel } from '../../lib/reloadData';
 
 type CS = { id: string; date: string; temp: string; distance: string; velocity: string; sd: string; es: string; group_size: string };
 type Step = { id: string; charge: string; velocity: string; group_size: string };
+
+// COAL reference checkboxes → each maps to an existing load field
+const COAL_REFS: { key: keyof Load; label: string }[] = [
+  { key: 'overall_coal',     label: 'SAC' },
+  { key: 'max_overall_coal', label: 'Hornady' },
+];
 
 const emptyLoad = (): Partial<Load> => ({
   id: uid(), load_id: genLoadId(), date: new Date().toISOString().slice(0, 10), rifle: '', caliber: '',
@@ -28,10 +35,19 @@ export default function LoadDetail() {
   const [cs,       setCs]       = useState<CS[]>([]);
   const [ladder,   setLadder]   = useState<Step[]>([]);
   const [ladderOn, setLadderOn] = useState(false);
+  const [coalOn,   setCoalOn]   = useState<Record<string, boolean>>({});
   const [loading,  setLoading]  = useState(!isNew);
   const [saving,   setSaving]   = useState(false);
 
   const f = (k: keyof Load, v: any) => setForm(p => ({ ...p, [k]: v }));
+
+  // a COAL ref shows checked if toggled on, or (before any toggle) if it already has a value
+  const coalChecked = (key: keyof Load) => coalOn[key] ?? (String(form[key] || '') !== '');
+  const toggleCoal = (key: keyof Load) => {
+    const next = !coalChecked(key);
+    setCoalOn(p => ({ ...p, [key]: next }));
+    if (!next) f(key, ''); // clear the value when unchecked
+  };
 
   useEffect(() => {
     db.rifles.getAll().then(({ data }) => setRifles(data || []));
@@ -100,7 +116,10 @@ export default function LoadDetail() {
       <ScrollView style={commonStyles.screen} contentContainerStyle={commonStyles.content}>
 
         <Text style={commonStyles.sectionTitle}>Load ID</Text>
-        {inp('load_id', 'Load ID', 'auto-generated')}
+        <View style={styles.loadIdBox}>
+          <Text style={styles.loadIdText}>{form.load_id || '—'}</Text>
+          <Text style={styles.loadIdHint}>auto-generated</Text>
+        </View>
 
         <Text style={commonStyles.sectionTitle}>Rifle</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
@@ -144,7 +163,24 @@ export default function LoadDetail() {
         {inp('lot_number', 'Lot Number')}
 
         <Text style={commonStyles.sectionTitle}>COAL</Text>
-        {inp('overall_coal', 'Overall COAL (in)')}
+        <View style={styles.coalChkRow}>
+          {COAL_REFS.map(r => {
+            const on = coalChecked(r.key);
+            return (
+              <TouchableOpacity key={r.key} style={[styles.coalChk, on && styles.coalChkOn]} onPress={() => toggleCoal(r.key)}>
+                <Ionicons name={on ? 'checkbox' : 'square-outline'} size={18} color={on ? C.accent : C.muted} />
+                <Text style={[styles.coalChkText, on && styles.coalChkTextOn]}>{r.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+        {COAL_REFS.map(r => coalChecked(r.key) ? (
+          <View key={r.key}>
+            <Text style={commonStyles.label}>{r.label} COAL (in)</Text>
+            <TextInput style={commonStyles.input} value={String(form[r.key] || '')} onChangeText={v => f(r.key, v)}
+              placeholderTextColor={C.muted} placeholder={`${r.label} COAL`} keyboardType="decimal-pad" />
+          </View>
+        ) : null)}
         {inp('headspace_coal', 'Headspace COAL (in)')}
         {inp('trim_len', 'Trim Length (in)')}
 
@@ -255,6 +291,14 @@ const styles = StyleSheet.create({
   csTitle:      { fontSize: 13, fontWeight: '700', color: C.accent },
   csDelete:     { color: C.red, fontSize: 16, fontWeight: '700' },
   textarea:     { height: 100, textAlignVertical: 'top' },
+  loadIdBox:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: C.surface, borderWidth: 1, borderColor: C.borderHi, borderRadius: 6, paddingHorizontal: 12, paddingVertical: 12, marginBottom: 4 },
+  loadIdText:    { color: C.text, fontSize: 16, fontWeight: '700', letterSpacing: 0.5 },
+  loadIdHint:    { color: C.muted, fontSize: 11, fontWeight: '600' },
+  coalChkRow:    { flexDirection: 'row', gap: 8, marginBottom: 12 },
+  coalChk:       { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 6, borderWidth: 1, borderColor: C.border, backgroundColor: C.surface },
+  coalChkOn:     { borderColor: C.accent, backgroundColor: C.accent + '18' },
+  coalChkText:   { color: C.muted, fontSize: 13, fontWeight: '600' },
+  coalChkTextOn: { color: C.accent },
   ladderHead:   { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4, marginTop: 2 },
   ladderH:      { color: C.muted, fontSize: 9, fontWeight: '700', letterSpacing: 0.4, textTransform: 'uppercase', textAlign: 'center' },
   ladderRow:    { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },

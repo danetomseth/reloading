@@ -4,11 +4,13 @@ import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { db, Session, Rifle, Load, uid } from '../../lib/supabase';
 import { C, commonStyles } from '../../lib/theme';
 
+type RangeRow = { id: string; range: string; calc_drop: string; obs_drop: string; wind: string; windage_hold: string };
+
 const emptySession = (): Partial<Session> => ({
   id: uid(), date: new Date().toISOString().slice(0, 10), rifle: '', load_id: '',
   location: '', distance: '', temp: '', humidity: '', pressure: '', density_alt: '',
   wind_speed: '', wind_dir: '', altitude: '', scope_adj: '', clicks_up: '',
-  clicks_right: '', group_size: '', rounds_fired: '', notes: '',
+  clicks_right: '', group_size: '', rounds_fired: '', ranges: '', notes: '',
 });
 
 export default function SessionDetail() {
@@ -18,6 +20,7 @@ export default function SessionDetail() {
   const [form,    setForm]    = useState<Partial<Session>>(emptySession());
   const [rifles,  setRifles]  = useState<Rifle[]>([]);
   const [loads,   setLoads]   = useState<Load[]>([]);
+  const [ranges,  setRanges]  = useState<RangeRow[]>([]);
   const [loading, setLoading] = useState(!isNew);
   const [saving,  setSaving]  = useState(false);
 
@@ -27,14 +30,22 @@ export default function SessionDetail() {
     db.rifles.getAll().then(({ data }) => setRifles(data || []));
     db.loads.getAll().then(({ data }) => setLoads(data || []));
     if (isNew) return;
-    db.sessions.get(id).then(({ data }) => { if (data) setForm(data); setLoading(false); });
+    db.sessions.get(id).then(({ data }) => {
+      if (data) { setForm(data); try { setRanges(data.ranges ? JSON.parse(data.ranges) : []); } catch(e) {} }
+      setLoading(false);
+    });
   }, [id]);
+
+  const addRange = () => setRanges(p => [...p, { id: uid(), range: '', calc_drop: '', obs_drop: '', wind: '', windage_hold: '' }]);
+  const updRange = (rid: string, k: keyof RangeRow, v: string) => setRanges(p => p.map(r => r.id === rid ? { ...r, [k]: v } : r));
+  const delRange = (rid: string) => setRanges(p => p.filter(r => r.id !== rid));
 
   const save = async () => {
     setSaving(true);
     const now = new Date().toISOString();
-    await db.sessions.upsert({ ...form, updated_at: now, created_at: form.created_at || now });
+    const { error } = await db.sessions.upsert({ ...form, ranges: JSON.stringify(ranges), updated_at: now, created_at: form.created_at || now });
     setSaving(false);
+    if (error) { Alert.alert('Save failed', error.message); return; }
     router.back();
   };
 
@@ -104,6 +115,48 @@ export default function SessionDetail() {
         {inp('clicks_right', 'Clicks Right')}
         {inp('scope_adj', 'Scope Notes')}
 
+        <View style={styles.rangeHeader}>
+          <Text style={commonStyles.sectionTitle}>Ranges</Text>
+          <TouchableOpacity style={styles.addBtn} onPress={addRange}>
+            <Text style={styles.addBtnText}>+ Add Range</Text>
+          </TouchableOpacity>
+        </View>
+        {ranges.map((r, i) => (
+          <View key={r.id} style={styles.rangeCard}>
+            <View style={styles.rangeTitleRow}>
+              <Text style={styles.rangeTitle}>Range {i + 1}{r.range ? ` — ${r.range} yd` : ''}</Text>
+              <TouchableOpacity onPress={() => delRange(r.id)}><Text style={styles.rangeDel}>✕</Text></TouchableOpacity>
+            </View>
+            <Text style={commonStyles.label}>Range (yd)</Text>
+            <TextInput style={commonStyles.input} value={r.range} onChangeText={v => updRange(r.id, 'range', v)}
+              placeholder="Range (yd)" placeholderTextColor={C.muted} keyboardType="number-pad" />
+            <View style={styles.rangeGrid}>
+              <View style={styles.rangeCol}>
+                <Text style={commonStyles.label}>Calc Drop</Text>
+                <TextInput style={commonStyles.input} value={r.calc_drop} onChangeText={v => updRange(r.id, 'calc_drop', v)}
+                  placeholder="Calculated" placeholderTextColor={C.muted} />
+              </View>
+              <View style={styles.rangeCol}>
+                <Text style={commonStyles.label}>Observed Drop</Text>
+                <TextInput style={commonStyles.input} value={r.obs_drop} onChangeText={v => updRange(r.id, 'obs_drop', v)}
+                  placeholder="Observed" placeholderTextColor={C.muted} />
+              </View>
+            </View>
+            <View style={styles.rangeGrid}>
+              <View style={styles.rangeCol}>
+                <Text style={commonStyles.label}>Wind</Text>
+                <TextInput style={commonStyles.input} value={r.wind} onChangeText={v => updRange(r.id, 'wind', v)}
+                  placeholder="Wind" placeholderTextColor={C.muted} />
+              </View>
+              <View style={styles.rangeCol}>
+                <Text style={commonStyles.label}>Windage Hold</Text>
+                <TextInput style={commonStyles.input} value={r.windage_hold} onChangeText={v => updRange(r.id, 'windage_hold', v)}
+                  placeholder="Windage" placeholderTextColor={C.muted} />
+              </View>
+            </View>
+          </View>
+        ))}
+
         <Text style={commonStyles.sectionTitle}>Results</Text>
         {inp('group_size', 'Group Size (in)')}
 
@@ -131,4 +184,13 @@ const styles = StyleSheet.create({
   chipText:    { color: C.muted, fontSize: 13, fontWeight: '600' },
   chipTextOn:  { color: C.accent },
   textarea:    { height: 100, textAlignVertical: 'top' },
+  rangeHeader:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  addBtn:        { backgroundColor: C.green + '22', borderWidth: 1, borderColor: C.green, borderRadius: 6, paddingHorizontal: 12, paddingVertical: 5 },
+  addBtnText:    { color: C.green, fontSize: 12, fontWeight: '700' },
+  rangeCard:     { backgroundColor: C.surface, borderRadius: 8, borderWidth: 1, borderColor: C.borderHi, padding: 12, marginBottom: 10, marginTop: 8 },
+  rangeTitleRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
+  rangeTitle:    { fontSize: 13, fontWeight: '700', color: C.accent },
+  rangeDel:      { color: C.red, fontSize: 16, fontWeight: '700' },
+  rangeGrid:     { flexDirection: 'row', gap: 10 },
+  rangeCol:      { flex: 1 },
 });

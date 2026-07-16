@@ -93,6 +93,7 @@ export type Session = {
   clicks_right: string;
   group_size: string;
   rounds_fired: string;
+  ranges?: string;
   notes: string;
   created_at?: string;
   updated_at?: string;
