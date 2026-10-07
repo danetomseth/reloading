@@ -10,6 +10,7 @@ import {
   parseShotView, ParsedXero, matchRifle, matchLoad, alreadyImported,
   buildNewLoad, mergeIntoLoad, MATCH_THRESHOLD,
 } from '../lib/importXero';
+import { allIds, assignCodes, findLoadByRef, nextLoadId, normId, parseLoadId, rifleOf } from '../lib/loadIds';
 
 const NEW = '__new__';
 
@@ -41,10 +42,13 @@ export default function Import() {
   }, []);
 
   const buildItem = (fileName: string, parsed: ParsedXero, rs: Rifle[], ls: Load[]): Item => {
+    // a session named with a load ID (current or old) goes straight to that load and its rifle
+    const direct = findLoadByRef(parsed.name, ls);
+    const directRifle = direct ? rifleOf(direct, rs) : undefined;
     const m = matchRifle(parsed.riflePart, rs);
-    const rifleChoice = m.rifle && m.score >= MATCH_THRESHOLD ? m.rifle.name : NEW;
+    const rifleChoice = directRifle ? directRifle.name : (m.rifle && m.score >= MATCH_THRESHOLD ? m.rifle.name : NEW);
     const effName = rifleChoice === NEW ? parsed.riflePart : rifleChoice;
-    const merge = matchLoad(parsed, effName, ls);
+    const merge = direct ?? matchLoad(parsed, effName, ls, rs);
     return {
       key: fileName + ':' + parsed.name + ':' + uid(),
       fileName, parsed, rifleChoice, newRifleName: parsed.riflePart,
@@ -77,7 +81,7 @@ export default function Import() {
     setItems(prev => prev.map(it => {
       if (it.key !== key) return it;
       const effName = choice === NEW ? it.newRifleName : choice;
-      const merge = matchLoad(it.parsed, effName, loads);
+      const merge = matchLoad(it.parsed, effName, loads, rifles);
       return { ...it, rifleChoice: choice, merge, dup: merge ? alreadyImported(merge, it.parsed) : false };
     }));
 
@@ -105,6 +109,7 @@ export default function Import() {
               id: uid(), name: rifleName, caliber: '', barrel_len: '', twist: '',
               scope_model: '', scope_height: '', scope_unit: 'moa', muzzle_device: '', notes: '',
             };
+            newRifle.code = assignCodes([...workRifles, newRifle as Rifle])[newRifle.id!];
             const { error } = await db.rifles.upsert(newRifle);
             if (error) throw error;
             workRifles.push(newRifle as Rifle);
@@ -115,7 +120,7 @@ export default function Import() {
         }
 
         // 2) resolve load (merge into matching lot, else create)
-        const merge = matchLoad(it.parsed, rifleName, workLoads);
+        const merge = findLoadByRef(it.parsed.name, workLoads) ?? matchLoad(it.parsed, rifleName, workLoads, workRifles);
         if (merge) {
           if (alreadyImported(merge, it.parsed)) { skipped++; continue; }
           const updated = mergeIntoLoad(merge, it.parsed);
@@ -125,7 +130,13 @@ export default function Import() {
           if (idx >= 0) workLoads[idx] = updated as Load;
           merged++;
         } else {
-          const load = buildNewLoad(it.parsed, rifleName);
+          // new loads get the next ID for their rifle — or the session's name if it's an unused ID for that rifle
+          const rifleObj = workRifles.find(r => r.name.trim().toLowerCase() === rifleName.toLowerCase());
+          const code = rifleObj ? assignCodes(workRifles)[rifleObj.id] : '';
+          const want = parseLoadId(it.parsed.name);
+          const taken = workLoads.some(l => allIds(l).some(x => normId(x) === normId(it.parsed.name)));
+          const loadId = !code ? '' : (want && want.code === code && !taken ? normId(it.parsed.name) : nextLoadId(code, workLoads));
+          const load = buildNewLoad(it.parsed, rifleName, { rifle_id: rifleObj?.id, load_id: loadId });
           const now = new Date().toISOString();
           const { error } = await db.loads.upsert({ ...load, created_at: now, updated_at: now });
           if (error) throw error;
@@ -155,7 +166,8 @@ export default function Import() {
       <ScrollView style={commonStyles.screen} contentContainerStyle={commonStyles.content}>
         <Text style={styles.intro}>
           Import Garmin Xero / ShotView CSV exports. Each file adds its velocity, SD and ES to a reload
-          as a chrono session — powder, bullet and charge stay blank for you to fill in.
+          as a chrono session — powder, bullet and charge stay blank for you to fill in. Name Xero sessions
+          with the load ID (like 25CM-007) and each file lands on that load.
         </Text>
 
         <TouchableOpacity style={styles.pickBtn} onPress={pick} disabled={!ready || busy}>
@@ -220,7 +232,7 @@ export default function Import() {
                   {it.dup
                     ? 'Already imported into this reload — will skip'
                     : it.merge
-                      ? `Merge into existing reload (lot ${it.merge.lot_number})`
+                      ? `Merge into ${it.merge.load_id || `lot ${it.merge.lot_number}`}`
                       : 'Create a new reload'}
                 </Text>
               </View>

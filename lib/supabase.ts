@@ -31,13 +31,18 @@ export type Rifle = {
   scope_unit: string;
   muzzle_device: string;
   notes: string;
+  code?: string;        // short prefix for load IDs, e.g. "25CM" → 25CM-001
+  zero_range?: string;  // yards
   created_at?: string;
   updated_at?: string;
 };
 
 export type Load = {
   id: string;
-  load_id?: string;
+  load_id?: string;     // human ID, e.g. "25CM-007"
+  legacy_ids?: string;  // JSON array of earlier IDs (old load_id / lot number)
+  rifle_id?: string;    // rifles.id — the reliable link; `rifle` (name) kept for display
+  ballistics?: string;  // JSON BallisticProfile (lib/ballisticProfile.ts)
   date: string;
   rifle: string;
   caliber: string;
@@ -87,6 +92,7 @@ export type Session = {
   id: string;
   date: string;
   rifle: string;
+  rifle_id?: string;
   load_id: string;
   location: string;
   distance: string;
@@ -113,18 +119,21 @@ export const db = {
     getAll: () => supabase.from('rifles').select('*').order('created_at', { ascending: false }),
     get: (id: string) => supabase.from('rifles').select('*').eq('id', id).single(),
     upsert: (r: Partial<Rifle>) => supabase.from('rifles').upsert(r),
+    update: (id: string, patch: Partial<Rifle>) => supabase.from('rifles').update(patch).eq('id', id),
     delete: (id: string) => supabase.from('rifles').delete().eq('id', id),
   },
   loads: {
     getAll: () => supabase.from('loads').select('*').order('created_at', { ascending: false }),
     get: (id: string) => supabase.from('loads').select('*').eq('id', id).single(),
     upsert: (l: Partial<Load>) => supabase.from('loads').upsert(l),
+    update: (id: string, patch: Partial<Load>) => supabase.from('loads').update(patch).eq('id', id),
     delete: (id: string) => supabase.from('loads').delete().eq('id', id),
   },
   sessions: {
     getAll: () => supabase.from('sessions').select('*').order('created_at', { ascending: false }),
     get: (id: string) => supabase.from('sessions').select('*').eq('id', id).single(),
     upsert: (s: Partial<Session>) => supabase.from('sessions').upsert(s),
+    update: (id: string, patch: Partial<Session>) => supabase.from('sessions').update(patch).eq('id', id),
     delete: (id: string) => supabase.from('sessions').delete().eq('id', id),
   },
   groups: {
@@ -144,10 +153,4 @@ export const parseLoadIds = (json?: string): string[] => {
 export const uid = () =>
   Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 
-// short, human-readable auto Load ID, e.g. "250715-K7Q" (date + random)
-export const genLoadId = (): string => {
-  const d = new Date();
-  const stamp = `${String(d.getFullYear()).slice(2)}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
-  const rand = Math.random().toString(36).slice(2, 5).toUpperCase();
-  return `${stamp}-${rand}`;
-};
+// Load IDs are generated per rifle (e.g. "25CM-007") — see lib/loadIds.ts.

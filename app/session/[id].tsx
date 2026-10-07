@@ -4,11 +4,15 @@ import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { db, Session, Rifle, Load, uid } from '../../lib/supabase';
 import { cachedList, cachedGet } from '../../lib/cache';
 import { C, commonStyles } from '../../lib/theme';
+import { belongsTo, rifleOf } from '../../lib/loadIds';
+import { atmoFromText, buildInput, num, readProfile, scopeUnit } from '../../lib/ballisticProfile';
+import { solve } from '../../lib/ballistics/solver';
+import { fromMil } from '../../lib/ballistics/truing';
 
 type RangeRow = { id: string; range: string; calc_drop: string; obs_drop: string; wind: string; windage_hold: string };
 
 const emptySession = (): Partial<Session> => ({
-  id: uid(), date: new Date().toISOString().slice(0, 10), rifle: '', load_id: '',
+  id: uid(), date: new Date().toISOString().slice(0, 10), rifle: '', rifle_id: '', load_id: '',
   location: '', distance: '', temp: '', humidity: '', pressure: '', density_alt: '',
   wind_speed: '', wind_dir: '', altitude: '', scope_adj: '', clicks_up: '',
   clicks_right: '', group_size: '', rounds_fired: '', ranges: '', notes: '',
@@ -65,7 +69,23 @@ export default function SessionDetail() {
     </View>
   );
 
-  const rifleLoads = loads.filter(l => l.rifle === form.rifle);
+  const curRifle = rifles.find(r => r.id === form.rifle_id) ?? rifleOf(form, rifles);
+  const rifleLoads = curRifle ? loads.filter(l => belongsTo(l, curRifle)) : [];
+
+  // fill each range's calculated elevation from the load's ballistic profile
+  const fillCalc = () => {
+    const load = loads.find(l => l.id === form.load_id);
+    if (!load) { Alert.alert('Pick a load', "Calculated drops come from the load's ballistic profile."); return; }
+    const prof = readProfile(load, curRifle);
+    if (!(prof.mv > 0 && prof.bc > 0)) { Alert.alert('Missing data', 'This load needs a muzzle velocity and BC first (Ballistics tab).'); return; }
+    const { atmo } = atmoFromText({ temp: form.temp, pressure: form.pressure, humidity: form.humidity, altitude: form.altitude });
+    const unit = scopeUnit(curRifle);
+    const rows = solve(buildInput(prof, curRifle, { atmo }), ranges.map(r => num(r.range) ?? 0).filter(x => x > 0)).rows;
+    setRanges(p => p.map(r => {
+      const row = rows.find(x => x.rangeYd === num(r.range));
+      return row ? { ...r, calc_drop: fromMil(row.elevMil, unit).toFixed(unit === 'mil' ? 2 : 1) } : r;
+    }));
+  };
 
   return (
     <>
@@ -74,11 +94,14 @@ export default function SessionDetail() {
 
         <Text style={commonStyles.sectionTitle}>Rifle</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
-          {rifles.map(r => (
-            <TouchableOpacity key={r.id} style={[styles.chip, form.rifle === r.name && styles.chipOn]} onPress={() => f('rifle', r.name)}>
-              <Text style={[styles.chipText, form.rifle === r.name && styles.chipTextOn]}>{r.name}</Text>
-            </TouchableOpacity>
-          ))}
+          {rifles.map(r => {
+            const on = curRifle?.id === r.id;
+            return (
+              <TouchableOpacity key={r.id} style={[styles.chip, on && styles.chipOn]} onPress={() => setForm(p => ({ ...p, rifle: r.name, rifle_id: r.id }))}>
+                <Text style={[styles.chipText, on && styles.chipTextOn]}>{r.name}</Text>
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
 
         {rifleLoads.length > 0 && (
@@ -88,7 +111,7 @@ export default function SessionDetail() {
               {rifleLoads.map(l => (
                 <TouchableOpacity key={l.id} style={[styles.chip, form.load_id === l.id && styles.chipOn]} onPress={() => f('load_id', l.id)}>
                   <Text style={[styles.chipText, form.load_id === l.id && styles.chipTextOn]}>
-                    {l.lot_number ? `LOT ${l.lot_number}` : `${l.bullet} ${l.bullet_wt}gr`}
+                    {l.load_id || (l.lot_number ? `LOT ${l.lot_number}` : `${l.bullet} ${l.bullet_wt}gr`)}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -118,9 +141,14 @@ export default function SessionDetail() {
 
         <View style={styles.rangeHeader}>
           <Text style={commonStyles.sectionTitle}>Ranges</Text>
-          <TouchableOpacity style={styles.addBtn} onPress={addRange}>
-            <Text style={styles.addBtnText}>+ Add Range</Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <TouchableOpacity style={styles.calcBtn} onPress={fillCalc}>
+              <Text style={styles.calcBtnText}>Fill calc</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.addBtn} onPress={addRange}>
+              <Text style={styles.addBtnText}>+ Add Range</Text>
+            </TouchableOpacity>
+          </View>
         </View>
         {ranges.map((r, i) => (
           <View key={r.id} style={styles.rangeCard}>
@@ -188,6 +216,8 @@ const styles = StyleSheet.create({
   rangeHeader:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   addBtn:        { backgroundColor: C.green + '22', borderWidth: 1, borderColor: C.green, borderRadius: 6, paddingHorizontal: 12, paddingVertical: 5 },
   addBtnText:    { color: C.green, fontSize: 12, fontWeight: '700' },
+  calcBtn:       { backgroundColor: C.accent + '22', borderWidth: 1, borderColor: C.accent, borderRadius: 6, paddingHorizontal: 12, paddingVertical: 5 },
+  calcBtnText:   { color: C.accent, fontSize: 12, fontWeight: '700' },
   rangeCard:     { backgroundColor: C.surface, borderRadius: 8, borderWidth: 1, borderColor: C.borderHi, padding: 12, marginBottom: 10, marginTop: 8 },
   rangeTitleRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
   rangeTitle:    { fontSize: 13, fontWeight: '700', color: C.accent },

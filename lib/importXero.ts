@@ -1,4 +1,5 @@
 import { Rifle, Load, uid } from './supabase';
+import { assignCodes, cleanCode, findLoadByRef, normId } from './loadIds';
 
 // ── Parsed shape of a Garmin Xero / ShotView CSV export ───────────────────────
 export type XeroShot = { n: number; speed: number; time: string };
@@ -19,7 +20,7 @@ export type ParsedXero = {
 // chrono-session object shape used by app/load/[id].tsx
 export type ChronoSession = {
   id: string; date: string; temp: string; distance: string;
-  velocity: string; sd: string; es: string; group_size: string;
+  velocity: string; sd: string; es: string; group_size: string; n?: string;
 };
 
 // ── CSV helpers ───────────────────────────────────────────────────────────────
@@ -84,10 +85,10 @@ export function parseShotView(text: string): ParsedXero {
   r.count = r.shots.length;
   r.isoDate = r.rawDate ? toIsoDate(r.rawDate) : new Date().toISOString().slice(0, 10);
 
-  // split "25CM - 8905" into rifle/lot parts
-  const dash = r.name.split(/\s+-\s+/);
+  // split "25CM - 8905" (old lot naming) or "25CM-007" (load ID) into rifle + load parts
+  const dash = r.name.split(/\s*-\s*/);
   r.riflePart = (dash[0] || r.name).trim();
-  r.lotPart = dash.length > 1 ? dash.slice(1).join(' - ').trim() : '';
+  r.lotPart = dash.length > 1 ? dash.slice(1).join('-').trim() : '';
 
   // compute avg/sd/es from shots if the summary rows were missing
   if (!r.avg && r.shots.length) {
@@ -160,6 +161,11 @@ function scoreRifle(riflePart: string, rifle: Rifle): number {
 // 85 = at least a cartridge-number match plus one corroborating signal (family or name).
 export const MATCH_THRESHOLD = 85;
 export function matchRifle(riflePart: string, rifles: Rifle[]): RifleMatch {
+  // a rifle's load ID code ("25CM") is an exact match
+  const codes = assignCodes(rifles);
+  const want = cleanCode(riflePart);
+  const byCode = want ? rifles.find(r => codes[r.id] === want) : undefined;
+  if (byCode) return { rifle: byCode, score: 100 };
   let best: RifleMatch = { rifle: null, score: 0 };
   for (const r of rifles) {
     const score = scoreRifle(riflePart, r);
@@ -169,19 +175,15 @@ export function matchRifle(riflePart: string, rifles: Rifle[]): RifleMatch {
 }
 
 // ── Load matching + building ──────────────────────────────────────────────────
-// find an existing load to merge into: same lot number (and same rifle if known)
-export function matchLoad(p: ParsedXero, rifleName: string, loads: Load[]): Load | null {
-  if (!p.lotPart) return null;
-  const lot = p.lotPart.toLowerCase();
-  const candidates = loads.filter(l => (l.lot_number || '').trim().toLowerCase() === lot);
-  if (!candidates.length) return null;
-  // prefer one already tied to the same rifle
-  const sameRifle = candidates.find(l => (l.rifle || '').toLowerCase() === rifleName.toLowerCase());
-  return sameRifle || candidates[0];
+// find an existing load to merge into: the session name matches a load ID
+// (current or legacy), or "<rifle> - <lot>" matches a lot on that rifle
+export function matchLoad(p: ParsedXero, rifleName: string, loads: Load[], rifles: Rifle[] = []): Load | null {
+  const rifle = rifles.find(r => r.name.trim().toLowerCase() === rifleName.trim().toLowerCase()) ?? null;
+  return findLoadByRef(p.name, loads, rifle);
 }
 
 export function toChronoSession(p: ParsedXero): ChronoSession {
-  return { id: uid(), date: p.isoDate, temp: '', distance: '', velocity: p.avg, sd: p.sd, es: p.es, group_size: '' };
+  return { id: uid(), date: p.isoDate, temp: '', distance: '', velocity: p.avg, sd: p.sd, es: p.es, group_size: '', n: String(p.count) };
 }
 
 function parseChrono(json?: string): ChronoSession[] {
@@ -202,14 +204,16 @@ const shotNote = (p: ParsedXero) => {
 };
 
 // build a brand-new Load from a parsed Xero session
-export function buildNewLoad(p: ParsedXero, rifleName: string): Partial<Load> {
+export function buildNewLoad(p: ParsedXero, rifleName: string, extra: { rifle_id?: string; load_id?: string } = {}): Partial<Load> {
   return {
     id: uid(),
+    load_id: extra.load_id ?? '',
+    rifle_id: extra.rifle_id,
     date: p.isoDate, rifle: rifleName, caliber: '',
     bullet: '', bullet_wt: '', bullet_bc: '', powder: '', charge: '', primer: '',
     brass: '', brass_fires: '', trim_len: '', overall_coal: '', headspace_coal: '',
     max_overall_coal: '', max_headspace_coal: '', neck_tension: '',
-    lot_number: p.lotPart,
+    lot_number: extra.load_id && normId(extra.load_id) === normId(p.name) ? '' : p.lotPart,
     velocity: p.avg, sd: p.sd, es: p.es, group_size: '', distance: '', status: 'testing',
     tumbled: 0, ultrasonic: 0, fl_sized: 0, neck_sized: 0, case_trimmed: 0,
     chrono_sessions: JSON.stringify([toChronoSession(p)]),

@@ -4,6 +4,7 @@ import { useFocusEffect } from 'expo-router';
 import { db, Rifle, Session } from '../../lib/supabase';
 import { cachedList } from '../../lib/cache';
 import { C, commonStyles } from '../../lib/theme';
+import { belongsTo } from '../../lib/loadIds';
 
 export default function Dope() {
   const [rifles,   setRifles]   = useState<Rifle[]>([]);
@@ -19,15 +20,16 @@ export default function Dope() {
       setRifles(rs);
       setSessions(ss);
       // default to first rifle on first load, but keep the user's current pick on refocus
-      setSelected(prev => prev || (rs[0]?.name ?? ''));
+      setSelected(prev => prev || (rs[0]?.id ?? ''));
       setLoading(false);
     });
   }, []));
 
   if (loading) return <View style={commonStyles.center}><ActivityIndicator color={C.accent} size="large" /></View>;
 
+  const selRifle = rifles.find(r => r.id === selected);
   const rows = sessions
-    .filter(s => s.rifle === selected && s.distance && s.clicks_up)
+    .filter(s => selRifle && belongsTo(s, selRifle) && s.distance && s.clicks_up)
     .sort((a, b) => Number(a.distance) - Number(b.distance));
 
   return (
@@ -35,10 +37,10 @@ export default function Dope() {
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
         {rifles.map(r => (
           <TouchableOpacity key={r.id}
-            style={[styles.chip, selected === r.name && styles.chipActive]}
-            onPress={() => setSelected(r.name)}
+            style={[styles.chip, selected === r.id && styles.chipActive]}
+            onPress={() => setSelected(r.id)}
           >
-            <Text style={[styles.chipText, selected === r.name && styles.chipTextActive]}>{r.name}</Text>
+            <Text style={[styles.chipText, selected === r.id && styles.chipTextActive]}>{r.name}</Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
@@ -50,7 +52,7 @@ export default function Dope() {
         </View>
       ) : (
         <>
-          <Text style={commonStyles.sectionTitle}>DOPE — {selected.toUpperCase()}</Text>
+          <Text style={commonStyles.sectionTitle}>DOPE — {(selRifle?.name ?? '').toUpperCase()}</Text>
           <View style={styles.header}>
             {['Range', 'Up', 'Right', 'Group', 'Temp'].map(h => (
               <Text key={h} style={styles.th}>{h}</Text>
