@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { db, Session, Rifle, Load, uid } from '../../lib/supabase';
+import { cachedList, cachedGet } from '../../lib/cache';
 import { C, commonStyles } from '../../lib/theme';
 
 type RangeRow = { id: string; range: string; calc_drop: string; obs_drop: string; wind: string; windage_hold: string };
@@ -27,10 +28,10 @@ export default function SessionDetail() {
   const f = (k: keyof Session, v: string) => setForm(p => ({ ...p, [k]: v }));
 
   useEffect(() => {
-    db.rifles.getAll().then(({ data }) => setRifles(data || []));
-    db.loads.getAll().then(({ data }) => setLoads(data || []));
+    cachedList<Rifle>('rifles', db.rifles.getAll()).then(setRifles);
+    cachedList<Load>('loads', db.loads.getAll()).then(setLoads);
     if (isNew) return;
-    db.sessions.get(id).then(({ data }) => {
+    cachedGet<Session>('sessions', db.sessions.get(id), id).then((data) => {
       if (data) { setForm(data); try { setRanges(data.ranges ? JSON.parse(data.ranges) : []); } catch(e) {} }
       setLoading(false);
     });

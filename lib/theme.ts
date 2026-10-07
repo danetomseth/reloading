@@ -1,19 +1,19 @@
 import { StyleSheet } from 'react-native';
 
 export const C = {
-  bg:        '#0a0f1a',
-  surface:   '#111827',
-  card:      '#1a2235',
-  border:    '#1e2d42',
-  borderHi:  '#2a3f5e',
-  accent:    '#3b82f6',
-  green:     '#22c55e',
-  orange:    '#f59e0b',
-  red:       '#ef4444',
-  purple:    '#8b5cf6',
-  muted:     '#4b6078',
-  textSoft:  '#8ba3bf',
-  text:      '#e2eaf4',
+  bg:        '#0a0e17',  // base
+  surface:   '#141d2e',  // inputs / bars — lifted off bg
+  card:      '#1b2740',  // cards — clearly distinct from bg
+  border:    '#2b3b56',  // more visible edges = crisper separation
+  borderHi:  '#3b5075',
+  accent:    '#4d8dff',  // slightly brighter blue for pop
+  green:     '#2fd672',
+  orange:    '#f9a83a',
+  red:       '#f2565a',
+  purple:    '#9b7cff',
+  muted:     '#6c81a0',  // placeholders/hints — readable, not dim
+  textSoft:  '#a1b6d2',  // secondary text + labels — clearly legible
+  text:      '#eef3fb',  // primary text — crisp near-white
   white:     '#ffffff',
 };
 
@@ -42,41 +42,41 @@ export const commonStyles = StyleSheet.create({
   },
   card: {
     backgroundColor: C.card,
-    borderRadius: 8,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: C.border,
-    padding: 14,
-    marginBottom: 10,
+    padding: 16,
+    marginBottom: 12,
   },
   label: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '700' as const,
-    color: C.muted,
-    letterSpacing: 0.8,
+    color: C.textSoft,
+    letterSpacing: 0.5,
     textTransform: 'uppercase' as const,
-    marginBottom: 4,
+    marginBottom: 6,
   },
   input: {
     backgroundColor: C.surface,
     borderWidth: 1,
     borderColor: C.border,
-    borderRadius: 6,
+    borderRadius: 8,
     color: C.text,
-    fontSize: 14,
-    padding: 10,
-    marginBottom: 10,
+    fontSize: 15,
+    padding: 12,
+    marginBottom: 12,
   },
   sectionTitle: {
-    fontSize: 11,
-    fontWeight: '700' as const,
+    fontSize: 12,
+    fontWeight: '800' as const,
     color: C.accent,
-    letterSpacing: 1,
+    letterSpacing: 0.8,
     textTransform: 'uppercase' as const,
-    marginTop: 16,
-    marginBottom: 8,
+    marginTop: 18,
+    marginBottom: 10,
     borderBottomWidth: 1,
     borderBottomColor: C.border,
-    paddingBottom: 4,
+    paddingBottom: 6,
   },
   fab: {
     position: 'absolute' as const,

@@ -2,18 +2,23 @@ import { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Switch } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { db, Load, Rifle, uid, genLoadId } from '../../lib/supabase';
+import * as DocumentPicker from 'expo-document-picker';
+import { File } from 'expo-file-system';
+import { db, Load, Rifle, Group, uid, genLoadId, parseLoadIds } from '../../lib/supabase';
+import { cachedList, cachedGet } from '../../lib/cache';
 import { C, commonStyles } from '../../lib/theme';
 import { PowderInput, BulletLibrary } from '../../components/ReloadPickers';
 import { diameterLabel } from '../../lib/reloadData';
+import { parseShotView, toChronoSession } from '../../lib/importXero';
 
 type CS = { id: string; date: string; temp: string; distance: string; velocity: string; sd: string; es: string; group_size: string };
 type Step = { id: string; charge: string; velocity: string; group_size: string };
 
 // COAL reference checkboxes → each maps to an existing load field
 const COAL_REFS: { key: keyof Load; label: string }[] = [
-  { key: 'overall_coal',     label: 'SAC' },
-  { key: 'max_overall_coal', label: 'Hornady' },
+  { key: 'overall_coal',      label: 'SAC' },
+  { key: 'max_overall_coal',  label: 'Hornady' },
+  { key: 'max_headspace_coal', label: 'OAL' },
 ];
 
 const emptyLoad = (): Partial<Load> => ({
@@ -36,6 +41,9 @@ export default function LoadDetail() {
   const [ladder,   setLadder]   = useState<Step[]>([]);
   const [ladderOn, setLadderOn] = useState(false);
   const [coalOn,   setCoalOn]   = useState<Record<string, boolean>>({});
+  const [groups,    setGroups]    = useState<Group[]>([]);
+  const [groupSel,  setGroupSel]  = useState<Set<string>>(new Set());
+  const [groupInit, setGroupInit] = useState<Set<string>>(new Set());
   const [loading,  setLoading]  = useState(!isNew);
   const [saving,   setSaving]   = useState(false);
 
@@ -49,10 +57,23 @@ export default function LoadDetail() {
     if (!next) f(key, ''); // clear the value when unchecked
   };
 
+  const toggleGroup = (gid: string) => setGroupSel(prev => {
+    const next = new Set(prev);
+    next.has(gid) ? next.delete(gid) : next.add(gid);
+    return next;
+  });
+
   useEffect(() => {
-    db.rifles.getAll().then(({ data }) => setRifles(data || []));
+    cachedList<Rifle>('rifles', db.rifles.getAll()).then(setRifles);
+    const loadId = isNew ? form.id! : id;
+    cachedList<Group>('groups', db.groups.getAll()).then(gs => {
+      setGroups(gs);
+      const inSet = new Set(gs.filter(g => parseLoadIds(g.load_ids).includes(loadId)).map(g => g.id));
+      setGroupSel(inSet);
+      setGroupInit(inSet);
+    });
     if (isNew) return;
-    db.loads.get(id).then(({ data }) => {
+    cachedGet<Load>('loads', db.loads.get(id), id).then((data) => {
       if (data) {
         setForm(data);
         try { setCs(data.chrono_sessions ? JSON.parse(data.chrono_sessions) : []); } catch(e) {}
@@ -71,8 +92,19 @@ export default function LoadDetail() {
       ladder: ladderOn ? JSON.stringify(ladder) : '',
       updated_at: now, created_at: form.created_at || now,
     });
+    if (error) { setSaving(false); Alert.alert('Save failed', error.message); return; }
+
+    // sync group memberships — only the groups whose membership changed
+    const loadId = form.id!;
+    for (const g of groups) {
+      const was = groupInit.has(g.id), nowIn = groupSel.has(g.id);
+      if (was === nowIn) continue;
+      const ids = new Set(parseLoadIds(g.load_ids));
+      nowIn ? ids.add(loadId) : ids.delete(loadId);
+      await db.groups.upsert({ ...g, load_ids: JSON.stringify([...ids]), updated_at: now });
+    }
+
     setSaving(false);
-    if (error) { Alert.alert('Save failed', error.message); return; }
     router.back();
   };
 
@@ -84,6 +116,26 @@ export default function LoadDetail() {
   const addCs = () => setCs(p => [...p, { id: uid(), date: new Date().toISOString().slice(0,10), temp: '', distance: '', velocity: '', sd: '', es: '', group_size: '' }]);
   const updCs = (sid: string, k: keyof CS, v: string) => setCs(p => p.map(s => s.id === sid ? { ...s, [k]: v } : s));
   const delCs = (sid: string) => setCs(p => p.filter(s => s.id !== sid));
+
+  // import one or more ShotView / Garmin Xero CSVs as chrono sessions on this load
+  const importCs = async () => {
+    const res = await DocumentPicker.getDocumentAsync({
+      multiple: true, copyToCacheDirectory: true,
+      type: ['text/csv', 'text/comma-separated-values', 'public.comma-separated-values', '*/*'],
+    });
+    if (res.canceled) return;
+    const added: CS[] = [];
+    for (const asset of res.assets) {
+      try {
+        const text = await new File(asset.uri).text();
+        const parsed = parseShotView(text);
+        if (!parsed.shots.length && !parsed.avg) continue; // not a ShotView CSV
+        added.push(toChronoSession(parsed));
+      } catch (e) { /* skip unreadable files */ }
+    }
+    if (added.length) setCs(p => [...p, ...added]);
+    else Alert.alert('No sessions imported', 'No readable ShotView/Xero CSV data found in the selected file(s).');
+  };
 
   const toggleLadder = (on: boolean) => {
     setLadderOn(on);
@@ -139,6 +191,23 @@ export default function LoadDetail() {
           ))}
         </View>
 
+        {groups.length > 0 && (
+          <>
+            <Text style={commonStyles.sectionTitle}>Groups</Text>
+            <View style={styles.groupWrap}>
+              {groups.map(g => {
+                const on = groupSel.has(g.id);
+                return (
+                  <TouchableOpacity key={g.id} style={[styles.groupChip, on && styles.groupChipOn]} onPress={() => toggleGroup(g.id)}>
+                    <Ionicons name={on ? 'checkmark-circle' : 'ellipse-outline'} size={15} color={on ? C.accent : C.muted} />
+                    <Text style={[styles.groupChipText, on && styles.groupChipTextOn]}>{g.name || 'Untitled'}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </>
+        )}
+
         <Text style={commonStyles.sectionTitle}>Components</Text>
         <BulletLibrary
           caliber={form.caliber}
@@ -176,9 +245,9 @@ export default function LoadDetail() {
         </View>
         {COAL_REFS.map(r => coalChecked(r.key) ? (
           <View key={r.key}>
-            <Text style={commonStyles.label}>{r.label} COAL (in)</Text>
+            <Text style={commonStyles.label}>{r.label} (in)</Text>
             <TextInput style={commonStyles.input} value={String(form[r.key] || '')} onChangeText={v => f(r.key, v)}
-              placeholderTextColor={C.muted} placeholder={`${r.label} COAL`} keyboardType="decimal-pad" />
+              placeholderTextColor={C.muted} placeholder={r.label} keyboardType="decimal-pad" />
           </View>
         ) : null)}
         {inp('headspace_coal', 'Headspace COAL (in)')}
@@ -233,9 +302,15 @@ export default function LoadDetail() {
 
         <View style={styles.csHeader}>
           <Text style={commonStyles.sectionTitle}>Chrono Sessions</Text>
-          <TouchableOpacity style={styles.addBtn} onPress={addCs}>
-            <Text style={styles.addBtnText}>+ Add</Text>
-          </TouchableOpacity>
+          <View style={styles.csHeaderBtns}>
+            <TouchableOpacity style={styles.importBtn} onPress={importCs}>
+              <Ionicons name="download-outline" size={13} color={C.accent} />
+              <Text style={styles.importBtnText}>Import CSV</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.addBtn} onPress={addCs}>
+              <Text style={styles.addBtnText}>+ Add</Text>
+            </TouchableOpacity>
+          </View>
         </View>
         {cs.map((s, i) => (
           <View key={s.id} style={styles.csCard}>
@@ -284,6 +359,9 @@ const styles = StyleSheet.create({
   togRow:       { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
   togLbl:       { color: C.text, fontSize: 14 },
   csHeader:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  csHeaderBtns: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  importBtn:    { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: C.accent + '18', borderWidth: 1, borderColor: C.accent, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 5 },
+  importBtnText:{ color: C.accent, fontSize: 12, fontWeight: '700' },
   addBtn:       { backgroundColor: C.green + '22', borderWidth: 1, borderColor: C.green, borderRadius: 6, paddingHorizontal: 12, paddingVertical: 5 },
   addBtnText:   { color: C.green, fontSize: 12, fontWeight: '700' },
   csCard:       { backgroundColor: C.surface, borderRadius: 8, borderWidth: 1, borderColor: C.borderHi, padding: 12, marginBottom: 10 },
@@ -299,6 +377,11 @@ const styles = StyleSheet.create({
   coalChkOn:     { borderColor: C.accent, backgroundColor: C.accent + '18' },
   coalChkText:   { color: C.muted, fontSize: 13, fontWeight: '600' },
   coalChkTextOn: { color: C.accent },
+  groupWrap:      { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 },
+  groupChip:      { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 18, borderWidth: 1, borderColor: C.border, backgroundColor: C.surface },
+  groupChipOn:    { borderColor: C.accent, backgroundColor: C.accent + '18' },
+  groupChipText:  { color: C.muted, fontSize: 13, fontWeight: '600' },
+  groupChipTextOn:{ color: C.accent },
   ladderHead:   { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4, marginTop: 2 },
   ladderH:      { color: C.muted, fontSize: 9, fontWeight: '700', letterSpacing: 0.4, textTransform: 'uppercase', textAlign: 'center' },
   ladderRow:    { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },

@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, RefreshControl, StyleSheet, ActivityIndicator } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { db, Rifle } from '../../lib/supabase';
+import { cachedList } from '../../lib/cache';
 import { C, commonStyles } from '../../lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -12,8 +13,7 @@ export default function Rifles() {
   const [refresh, setRefresh] = useState(false);
 
   const fetch = async () => {
-    const { data } = await db.rifles.getAll();
-    setRifles(data || []);
+    setRifles(await cachedList<Rifle>('rifles', db.rifles.getAll()));
     setLoading(false);
     setRefresh(false);
   };

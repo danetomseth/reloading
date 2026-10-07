@@ -74,6 +74,15 @@ export type Load = {
   updated_at?: string;
 };
 
+export type Group = {
+  id: string;
+  name: string;
+  load_ids: string;   // JSON array of load id strings
+  notes: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
 export type Session = {
   id: string;
   date: string;
@@ -118,6 +127,18 @@ export const db = {
     upsert: (s: Partial<Session>) => supabase.from('sessions').upsert(s),
     delete: (id: string) => supabase.from('sessions').delete().eq('id', id),
   },
+  groups: {
+    getAll: () => supabase.from('groups').select('*').order('created_at', { ascending: false }),
+    get: (id: string) => supabase.from('groups').select('*').eq('id', id).single(),
+    upsert: (g: Partial<Group>) => supabase.from('groups').upsert(g),
+    delete: (id: string) => supabase.from('groups').delete().eq('id', id),
+  },
+};
+
+// membership helpers — load_ids is stored as a JSON array string
+export const parseLoadIds = (json?: string): string[] => {
+  if (!json) return [];
+  try { const v = JSON.parse(json); return Array.isArray(v) ? v : []; } catch { return []; }
 };
 
 export const uid = () =>

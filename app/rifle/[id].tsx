@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { db, Rifle, uid } from '../../lib/supabase';
+import { cachedGet } from '../../lib/cache';
 import { C, commonStyles } from '../../lib/theme';
 
 const empty = (): Partial<Rifle> => ({
@@ -21,7 +22,7 @@ export default function RifleDetail() {
 
   useEffect(() => {
     if (isNew) return;
-    db.rifles.get(id).then(({ data }) => { if (data) setForm(data); setLoading(false); });
+    cachedGet<Rifle>('rifles', db.rifles.get(id), id).then((data) => { if (data) setForm(data); setLoading(false); });
   }, [id]);
 
   const save = async () => {

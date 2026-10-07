@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { db, Rifle, Session } from '../../lib/supabase';
+import { cachedList } from '../../lib/cache';
 import { C, commonStyles } from '../../lib/theme';
 
 export default function Dope() {
@@ -11,10 +12,12 @@ export default function Dope() {
   const [loading,  setLoading]  = useState(true);
 
   useFocusEffect(useCallback(() => {
-    Promise.all([db.rifles.getAll(), db.sessions.getAll()]).then(([r, s]) => {
-      const rs = r.data || [];
+    Promise.all([
+      cachedList<Rifle>('rifles', db.rifles.getAll()),
+      cachedList<Session>('sessions', db.sessions.getAll()),
+    ]).then(([rs, ss]) => {
       setRifles(rs);
-      setSessions(s.data || []);
+      setSessions(ss);
       // default to first rifle on first load, but keep the user's current pick on refocus
       setSelected(prev => prev || (rs[0]?.name ?? ''));
       setLoading(false);

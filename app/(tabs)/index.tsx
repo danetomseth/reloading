@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, RefreshControl, StyleSheet, ActivityIndicator } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { db, Rifle, Load, Session } from '../../lib/supabase';
+import { cachedList } from '../../lib/cache';
 import { C, commonStyles } from '../../lib/theme';
 
 export default function Dashboard() {
@@ -14,13 +15,13 @@ export default function Dashboard() {
 
   const fetchAll = useCallback(async () => {
     const [r, l, s] = await Promise.all([
-      db.rifles.getAll(),
-      db.loads.getAll(),
-      db.sessions.getAll(),
+      cachedList<Rifle>('rifles', db.rifles.getAll()),
+      cachedList<Load>('loads', db.loads.getAll()),
+      cachedList<Session>('sessions', db.sessions.getAll()),
     ]);
-    setRifles(r.data || []);
-    setLoads(l.data || []);
-    setSessions(s.data || []);
+    setRifles(r);
+    setLoads(l);
+    setSessions(s);
     setLoading(false);
     setRefresh(false);
   }, []);
