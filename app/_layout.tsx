@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -8,6 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { C, FONTS, isDark, F } from '../lib/theme';
+import { AppMode, getMode } from '../lib/mode';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -23,6 +24,8 @@ export default function RootLayout() {
   const router = useRouter();
   const [fontsLoaded, fontError] = useFonts(FONTS);
   const fontsReady = fontsLoaded || !!fontError;
+  const [mode, setModeState] = useState<AppMode | null | undefined>(undefined);
+  const routed = useRef(false);
 
   useEffect(() => {
     let settled = false;
@@ -64,7 +67,7 @@ export default function RootLayout() {
     const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
       setSession(s);
       if (s) markSeen();
-      if (event === 'SIGNED_OUT') { setEverSignedIn(false); AsyncStorage.removeItem(SEEN_KEY); }
+      if (event === 'SIGNED_OUT') { setEverSignedIn(false); AsyncStorage.removeItem(SEEN_KEY); routed.current = false; }
     });
     return () => { clearTimeout(timer); sub.subscription.unsubscribe(); };
   }, []);
@@ -81,6 +84,19 @@ export default function RootLayout() {
     else if (session && onLogin) router.replace('/');
   }, [ready, session, everSignedIn, segments, fontsReady]);
 
+  useEffect(() => { getMode().then(setModeState); }, []);
+
+  // once per launch (and after each sign-in): open Field mode if that's what
+  // was used last, or ask which mode to use the first time
+  useEffect(() => {
+    if (!ready || everSignedIn === null || !fontsReady || mode === undefined || routed.current) return;
+    if (!session && !everSignedIn) return;
+    if (segments[0] === 'login') return;
+    routed.current = true;
+    if (mode === 'field') router.replace('/field' as any);
+    else if (mode === null) router.replace('/mode' as any);
+  }, [ready, everSignedIn, fontsReady, mode, session, segments]);
+
   if (!fontsReady) return null;
 
   return (
@@ -90,14 +106,16 @@ export default function RootLayout() {
         screenOptions={{
           headerStyle: { backgroundColor: C.bg },
           headerShadowVisible: false,
-          headerTintColor: C.text,
-          headerTitleStyle: { fontFamily: F.bold, fontSize: 18 },
+          headerTintColor: C.accent,
+          headerTitleStyle: { fontFamily: F.semibold, fontSize: 18, color: C.text },
           headerBackButtonDisplayMode: 'minimal',
           contentStyle: { backgroundColor: C.bg },
         }}
       >
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="login" options={{ headerShown: false }} />
+        <Stack.Screen name="field" options={{ headerShown: false, gestureEnabled: false }} />
+        <Stack.Screen name="mode" options={{ headerShown: false, gestureEnabled: false }} />
       </Stack>
     </GestureHandlerRootView>
   );

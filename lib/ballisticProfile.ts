@@ -190,6 +190,18 @@ export function buildInput(p: BallisticProfile, rifle: Rifle | null | undefined,
   };
 }
 
+// A G1 BC entered under G7 is the classic mistake: it roughly halves the drag.
+// A G7 form factor (sectional density ÷ BC) under ~0.75 is more streamlined
+// than any bullet made; real match bullets sit near 0.85–1.0.
+export function bcWarning(model: DragModelName, bc: number, weightGr?: number | null, diameterIn?: number | null): string | null {
+  if (model !== 'G7' || !(bc > 0)) return null;
+  if (weightGr && diameterIn) {
+    const ff = weightGr / 7000 / (diameterIn * diameterIn) / bc;
+    return ff < 0.75 ? `A G7 BC of ${bc} would make this bullet far more streamlined than any bullet made. It's almost certainly a G1 number.` : null;
+  }
+  return bc > 0.45 ? `A G7 BC of ${bc} is unusually high; most are under 0.40. Check it isn't a G1 number.` : null;
+}
+
 // what's missing before the solver can run
 export function profileGaps(p: BallisticProfile): string[] {
   const gaps: string[] = [];

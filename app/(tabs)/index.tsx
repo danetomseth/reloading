@@ -9,6 +9,7 @@ import { C, Type, commonStyles, statusColor, F, isDark, saveThemeMode, ThemeMode
 import { IconName, Item, Section } from '../../components/Form';
 import { assignCodes, belongsTo, planUpgrade, rifleOf } from '../../lib/loadIds';
 import { headline, monthlyTotals, pickBest, recipe, shortDate } from '../../lib/metrics';
+import { setMode } from '../../lib/mode';
 import { num } from '../../lib/ballisticProfile';
 import { ColumnChart } from '../../components/Chart';
 
@@ -84,7 +85,7 @@ export default function Home() {
       <View style={st.quickRow}>
         <Quick icon="add-circle" label="New load" onPress={() => go('/load/new')} />
         <Quick icon="clipboard" label="Log session" onPress={() => go('/session/new')} />
-        <Quick icon="analytics" label="Ballistics" onPress={() => go('/(tabs)/ballistics')} />
+        <Quick icon="speedometer" label="Field mode" onPress={() => { setMode('field'); router.replace('/field' as any); }} />
       </View>
 
       {pending > 0 && (

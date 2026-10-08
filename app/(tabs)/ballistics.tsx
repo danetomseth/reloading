@@ -9,7 +9,7 @@ import { BarList, LineChart } from '../../components/Chart';
 import { Reticle, WindDial } from '../../components/Visuals';
 import { belongsTo } from '../../lib/loadIds';
 import {
-  BallisticProfile, atmoFromText, effectiveMv, num, parseTwist, readProfile, rifleSetup, scopeUnit, writeProfile,
+  BallisticProfile, atmoFromText, bcWarning, effectiveMv, num, parseTwist, readProfile, rifleSetup, scopeUnit, writeProfile,
 } from '../../lib/ballisticProfile';
 import type { DragModelName } from '../../lib/ballistics/drag';
 import { densityAltitude } from '../../lib/ballistics/atmosphere';
@@ -240,6 +240,15 @@ export default function Ballistics() {
               calc.traj.sg != null ? `stability ${calc.traj.sg.toFixed(2)}${calc.traj.sg < 1.4 ? ' (marginal)' : ''}` : '',
               calc.transonic != null ? `transonic ${calc.transonic} yd` : ''].filter(Boolean).join(' · ')}
           </Text>
+        </View>
+      )}
+
+      {calc && bcWarning(b.model, num(b.bc) ?? 0, num(b.weight), num(b.diameter)) && (
+        <View style={{ marginTop: 12 }}>
+          <Note tone="warn">
+            {bcWarning(b.model, num(b.bc) ?? 0, num(b.weight), num(b.diameter))}{' '}
+            <Text style={{ fontFamily: F.semibold, color: C.accent }} onPress={() => setB(p => ({ ...p, model: 'G1' }))}>Switch to G1</Text>
+          </Note>
         </View>
       )}
 
