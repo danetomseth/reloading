@@ -21,6 +21,7 @@ import {
   mvErrorTable, observedElevationMil, shotsNeeded, solveBcFromVelocities, statsFromShots, tempSensitivity, trueFromDrop,
 } from '../../lib/ballistics/truing';
 import { parseShotView, ParsedXero, XeroShot } from '../../lib/importXero';
+import { LineChart } from '../../components/Chart';
 
 type StepKey = 'mv' | 'bc' | 'drop';
 type EnvText = AtmoText & { wind: string; clock: string };
@@ -309,6 +310,18 @@ function MvStep({ load, profile, input, unit, saving, onSave }: {
         <Note>Log chrono sessions at temperatures 10°F or more apart and this measures temperature sensitivity, so the solver can adjust MV for the day.</Note>
       )}
 
+      {ts && (() => {
+        const pts = tempPoints(load).map(p => ({ x: p.tempF, y: p.velocity }));
+        const xs = pts.map(p => p.x);
+        const fit = [Math.min(...xs), Math.max(...xs)].map(x => ({ x, y: ts.refVelocity + ts.fpsPerF * (x - ts.refTempF) }));
+        return pts.length >= 2 ? (
+          <View style={styles.chartCard}>
+            <LineChart series={[{ points: pts, color: C.orange, line: false }, { points: fit, color: C.orange + '99', dots: false }]} xFormat={v => `${Math.round(v)}°`} />
+            <Text style={styles.caption}>Session average velocity by temperature, with the fitted line.</Text>
+          </View>
+        ) : null;
+      })()}
+
       <Button label={saving ? 'Saving…' : 'Save muzzle velocity'} onPress={doSave} disabled={saving || !stats} />
     </>
   );
@@ -548,4 +561,5 @@ const styles = StyleSheet.create({
   switchRow:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   switchText:   { color: C.text, fontSize: 13, flex: 1 },
   log:          { color: C.textSoft, fontSize: 12, marginBottom: 4 },
+  chartCard:    { backgroundColor: C.card, borderRadius: 14, padding: 12, marginBottom: 12 },
 });

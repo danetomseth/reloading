@@ -58,7 +58,7 @@ export default function GroupDetail() {
   if (loading) return <View style={commonStyles.center}><ActivityIndicator color={C.accent} size="large" /></View>;
 
   const filtered = loads.filter(l =>
-    !filter || [l.rifle, l.bullet, l.powder, l.lot_number].some(v => v?.toLowerCase().includes(filter.toLowerCase()))
+    !filter || [l.load_id, l.rifle, l.bullet, l.powder, l.lot_number].some(v => v?.toLowerCase().includes(filter.toLowerCase()))
   );
 
   return (
@@ -94,7 +94,7 @@ export default function GroupDetail() {
             <TouchableOpacity key={l.id} style={[styles.loadRow, on && styles.loadRowOn]} onPress={() => toggle(l.id)}>
               <Ionicons name={on ? 'checkbox' : 'square-outline'} size={22} color={on ? C.accent : C.muted} />
               <View style={{ flex: 1, marginLeft: 12 }}>
-                <Text style={styles.loadRifle}>{l.rifle}</Text>
+                <Text style={styles.loadRifle}>{l.load_id ? `${l.load_id} · ` : ''}{l.rifle}</Text>
                 <Text style={styles.loadSub}>{l.bullet} {l.bullet_wt}gr · {l.powder} {l.charge}gr</Text>
               </View>
               <View style={[styles.badge, { borderColor: sc + '44', backgroundColor: sc + '22' }]}>

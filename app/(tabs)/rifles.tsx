@@ -1,69 +1,64 @@
-import { useState, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, RefreshControl, StyleSheet, ActivityIndicator } from 'react-native';
-import { useRouter, useFocusEffect } from 'expo-router';
-import { db, Rifle } from '../../lib/supabase';
+import { useState, useCallback, useMemo } from 'react';
+import { View, ScrollView, RefreshControl, ActivityIndicator } from 'react-native';
+import { useRouter, useFocusEffect, Tabs } from 'expo-router';
+import { db, Rifle, Load } from '../../lib/supabase';
 import { cachedList } from '../../lib/cache';
 import { C, commonStyles } from '../../lib/theme';
-import { Ionicons } from '@expo/vector-icons';
+import { EmptyState, HeaderButton, Item, Section } from '../../components/Form';
+import { assignCodes, belongsTo } from '../../lib/loadIds';
+import { headline, pickBest } from '../../lib/metrics';
 
 export default function Rifles() {
   const router = useRouter();
   const [rifles,  setRifles]  = useState<Rifle[]>([]);
+  const [loads,   setLoads]   = useState<Load[]>([]);
   const [loading, setLoading] = useState(true);
   const [refresh, setRefresh] = useState(false);
 
   const fetch = async () => {
-    setRifles(await cachedList<Rifle>('rifles', db.rifles.getAll()));
+    const [r, l] = await Promise.all([
+      cachedList<Rifle>('rifles', db.rifles.getAll()),
+      cachedList<Load>('loads', db.loads.getAll()),
+    ]);
+    setRifles(r);
+    setLoads(l);
     setLoading(false);
     setRefresh(false);
   };
 
   useFocusEffect(useCallback(() => { fetch(); }, []));
+  const codes = useMemo(() => assignCodes(rifles), [rifles]);
 
   if (loading) return <View style={commonStyles.center}><ActivityIndicator color={C.accent} size="large" /></View>;
 
   return (
     <View style={commonStyles.screen}>
+      <Tabs.Screen options={{ headerRight: () => <HeaderButton icon="add" inset onPress={() => router.push('/rifle/new' as any)} /> }} />
       <ScrollView
         contentContainerStyle={commonStyles.content}
         refreshControl={<RefreshControl refreshing={refresh} onRefresh={() => { setRefresh(true); fetch(); }} tintColor={C.accent} />}
       >
         {rifles.length === 0 ? (
-          <View style={styles.empty}>
-            <Text style={styles.emptyText}>No rifles yet</Text>
-            <Text style={styles.emptyHint}>Tap + to add your first rifle</Text>
-          </View>
-        ) : rifles.map(r => (
-          <TouchableOpacity key={r.id} style={commonStyles.card} onPress={() => router.push(`/rifle/${r.id}` as any)}>
-            <View style={styles.row}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.name}>{r.name}</Text>
-                <Text style={styles.caliber}>{r.caliber}</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color={C.muted} />
-            </View>
-            <View style={styles.details}>
-              {r.barrel_len ? <Text style={styles.detail}>🔫 {r.barrel_len}"</Text> : null}
-              {r.twist ? <Text style={styles.detail}>1:{r.twist} twist</Text> : null}
-              {r.scope_model ? <Text style={styles.detail}>🔭 {r.scope_model}</Text> : null}
-            </View>
-          </TouchableOpacity>
-        ))}
+          <EmptyState icon="locate-outline" title="No rifles yet" body="Add a rifle and its loads get numbered automatically."
+            action="Add rifle" onAction={() => router.push('/rifle/new' as any)} />
+        ) : (
+          <Section style={{ marginTop: 0 }}>
+            {rifles.map(r => {
+              const mine = loads.filter(l => belongsTo(l, r));
+              const best = pickBest(mine);
+              return (
+                <Item
+                  key={r.id}
+                  label={r.name}
+                  sub={[r.caliber, codes[r.id], `${mine.length} load${mine.length === 1 ? '' : 's'}`].filter(Boolean).join(' · ')}
+                  value={best ? headline(best) : ''}
+                  onPress={() => router.push(`/rifle/${r.id}` as any)}
+                />
+              );
+            })}
+          </Section>
+        )}
       </ScrollView>
-      <TouchableOpacity style={commonStyles.fab} onPress={() => router.push('/rifle/new' as any)}>
-        <Ionicons name="add" size={28} color={C.white} />
-      </TouchableOpacity>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  empty:     { alignItems: 'center', marginTop: 80 },
-  emptyText: { color: C.text, fontSize: 16, fontWeight: '600' },
-  emptyHint: { color: C.muted, fontSize: 13, marginTop: 6 },
-  row:       { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
-  name:      { fontSize: 15, fontWeight: '700', color: C.text },
-  caliber:   { fontSize: 13, color: C.accent, marginTop: 2 },
-  details:   { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  detail:    { fontSize: 12, color: C.textSoft },
-});

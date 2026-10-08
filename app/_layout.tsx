@@ -83,7 +83,8 @@ export default function RootLayout() {
       <StatusBar style="light" />
       <Stack
         screenOptions={{
-          headerStyle: { backgroundColor: C.surface },
+          headerStyle: { backgroundColor: C.bg },
+          headerShadowVisible: false,
           headerTintColor: C.text,
           headerTitleStyle: { fontWeight: '800', fontSize: 18 },
           headerBackButtonDisplayMode: 'minimal',

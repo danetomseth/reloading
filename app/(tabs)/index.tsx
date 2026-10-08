@@ -1,12 +1,27 @@
-import { useState, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, RefreshControl, StyleSheet, ActivityIndicator } from 'react-native';
+import { useState, useCallback, useMemo } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, RefreshControl, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { db, Rifle, Load, Session } from '../../lib/supabase';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { db, supabase, Rifle, Load, Session } from '../../lib/supabase';
 import { cachedList } from '../../lib/cache';
-import { C, commonStyles } from '../../lib/theme';
+import { C, Type, commonStyles, statusColor } from '../../lib/theme';
+import { IconName, Item, Section } from '../../components/Form';
+import { assignCodes, belongsTo, planUpgrade, rifleOf } from '../../lib/loadIds';
+import { headline, monthlyTotals, pickBest, recipe, shortDate } from '../../lib/metrics';
+import { num } from '../../lib/ballisticProfile';
+import { ColumnChart } from '../../components/Chart';
 
-export default function Dashboard() {
+const signOut = () => Alert.alert('Sign out', 'Sign out of your account?', [
+  { text: 'Cancel', style: 'cancel' },
+  { text: 'Sign out', style: 'destructive', onPress: () => { supabase.auth.signOut(); } },
+]);
+
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
+export default function Home() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [rifles,   setRifles]   = useState<Rifle[]>([]);
   const [loads,    setLoads]    = useState<Load[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -28,91 +43,111 @@ export default function Dashboard() {
 
   useFocusEffect(useCallback(() => { fetchAll(); }, [fetchAll]));
 
-  if (loading) return (
-    <View style={commonStyles.center}>
-      <ActivityIndicator color={C.accent} size="large" />
-    </View>
-  );
+  const plan = useMemo(() => planUpgrade(rifles, loads, assignCodes(rifles)), [rifles, loads]);
+  const best = useMemo(() => rifles.map(r => {
+    const mine = loads.filter(l => belongsTo(l, r));
+    return { rifle: r, count: mine.length, load: pickBest(mine) };
+  }), [rifles, loads]);
+  const activity = useMemo(() => {
+    const rounds = monthlyTotals(sessions, s => s.date, s => num(s.rounds_fired) ?? 0);
+    const anyRounds = rounds.some(m => m.value > 0);
+    return { anyRounds, months: anyRounds ? rounds : monthlyTotals(sessions, s => s.date, () => 1) };
+  }, [sessions]);
+  const recent = useMemo(() => [...sessions].sort((a, b) => (b.date || '').localeCompare(a.date || '')).slice(0, 4), [sessions]);
 
-  const proven = loads.filter(l => l.status === 'proven');
+  if (loading) return <View style={commonStyles.center}><ActivityIndicator color={C.accent} size="large" /></View>;
+
+  const pending = plan.pending + plan.unlinked.length;
+  const go = (path: string) => router.push(path as any);
 
   return (
     <ScrollView
       style={commonStyles.screen}
-      contentContainerStyle={commonStyles.content}
+      contentContainerStyle={[commonStyles.content, { paddingTop: insets.top + 16 }]}
       refreshControl={<RefreshControl refreshing={refresh} onRefresh={() => { setRefresh(true); fetchAll(); }} tintColor={C.accent} />}
     >
-      <Text style={styles.logo}>⊕ LRS TRACKER</Text>
+      <Text style={Type.display}>LRS Tracker</Text>
+      <Text style={[Type.sub, { marginTop: 4 }]}>
+        {plural(rifles.length, 'rifle')}, {plural(loads.length, 'load')}, {plural(sessions.length, 'range session')}
+      </Text>
 
-      {/* Stats */}
-      <View style={styles.statsRow}>
-        {[
-          { label: 'Rifles',   val: rifles.length,   route: '/(tabs)/rifles' },
-          { label: 'Loads',    val: loads.length,    route: '/(tabs)/reloads' },
-          { label: 'Sessions', val: sessions.length, route: '/(tabs)/fieldlog' },
-          { label: 'Proven',   val: proven.length,   route: '/(tabs)/reloads' },
-        ].map(s => (
-          <TouchableOpacity key={s.label} style={styles.statCard} onPress={() => router.push(s.route as any)}>
-            <Text style={styles.statVal}>{s.val}</Text>
-            <Text style={styles.statLbl}>{s.label}</Text>
-          </TouchableOpacity>
-        ))}
+      <View style={st.quickRow}>
+        <Quick icon="add-circle" label="New load" onPress={() => go('/load/new')} />
+        <Quick icon="clipboard" label="Log session" onPress={() => go('/session/new')} />
+        <Quick icon="analytics" label="Ballistics" onPress={() => go('/(tabs)/ballistics')} />
       </View>
 
-      {/* Proven loads */}
-      {proven.length > 0 && (
-        <>
-          <Text style={commonStyles.sectionTitle}>PROVEN LOADS</Text>
-          {proven.slice(0, 3).map(l => (
-            <TouchableOpacity key={l.id} style={commonStyles.card} onPress={() => router.push(`/load/${l.id}` as any)}>
-              <Text style={styles.loadRifle}>{l.rifle}</Text>
-              <Text style={styles.loadSub}>{l.bullet} {l.bullet_wt}gr · {l.powder} {l.charge}gr</Text>
-              {l.velocity ? <Text style={styles.loadVel}>{l.velocity} fps  SD:{l.sd}</Text> : null}
-            </TouchableOpacity>
-          ))}
-        </>
+      {pending > 0 && (
+        <TouchableOpacity style={st.banner} onPress={() => go('/load-ids')} activeOpacity={0.7}>
+          <Ionicons name="pricetags-outline" size={18} color={C.orange} />
+          <View style={{ flex: 1 }}>
+            <Text style={st.bannerTitle}>Switch to per-rifle load IDs</Text>
+            <Text style={st.bannerText}>{plural(pending, 'load')} to update. Old IDs stay attached.</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={C.muted} />
+        </TouchableOpacity>
       )}
 
-      {/* Recent sessions */}
-      {sessions.length > 0 && (
-        <>
-          <Text style={commonStyles.sectionTitle}>RECENT SESSIONS</Text>
-          {sessions.slice(0, 3).map(s => (
-            <TouchableOpacity key={s.id} style={commonStyles.card} onPress={() => router.push(`/session/${s.id}` as any)}>
-              <Text style={styles.loadRifle}>{s.rifle}</Text>
-              <Text style={styles.loadSub}>{s.date?.slice(0, 10)}{s.location ? ` · ${s.location}` : ''}</Text>
-            </TouchableOpacity>
+      <Section title="Best load per rifle" action={rifles.length ? 'All rifles' : undefined} onAction={() => go('/(tabs)/rifles')}>
+        {best.length === 0
+          ? <Item icon="add" tone="accent" label="Add your first rifle" onPress={() => go('/rifle/new')} />
+          : best.map(({ rifle, count, load }) => (
+            <Item
+              key={rifle.id}
+              dot={load ? statusColor(load.status) : C.border}
+              label={rifle.name}
+              sub={load ? `${load.load_id || 'No ID'} · ${recipe(load) || load.status}` : count ? plural(count, 'load') : 'No loads yet'}
+              value={load ? headline(load) : ''}
+              onPress={() => go(load ? `/load/${load.id}` : `/rifle/${rifle.id}`)}
+            />
           ))}
-        </>
+      </Section>
+
+      {sessions.length > 0 && activity.months.some(m => m.value > 0) && (
+        <Section title={activity.anyRounds ? 'Rounds fired' : 'Range sessions'} plain footer="Last six months, from your field log.">
+          <ColumnChart items={activity.months} />
+        </Section>
       )}
 
-      {/* Quick add */}
-      <Text style={commonStyles.sectionTitle}>QUICK ADD</Text>
-      <View style={styles.quickRow}>
-        {[
-          { label: '+ Rifle',   route: '/rifle/new' },
-          { label: '+ Load',    route: '/load/new' },
-          { label: '+ Session', route: '/session/new' },
-        ].map(q => (
-          <TouchableOpacity key={q.label} style={styles.quickBtn} onPress={() => router.push(q.route as any)}>
-            <Text style={styles.quickBtnText}>{q.label}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      {recent.length > 0 && (
+        <Section title="Recent range sessions" action="Field log" onAction={() => go('/(tabs)/fieldlog')}>
+          {recent.map(s => {
+            const load = loads.find(l => l.id === s.load_id);
+            return (
+              <Item
+                key={s.id}
+                label={`${shortDate(s.date)} · ${rifleOf(s, rifles)?.name ?? s.rifle ?? 'Session'}`}
+                sub={[load?.load_id, s.location, s.distance ? `${s.distance} yd` : ''].filter(Boolean).join(' · ') || undefined}
+                value={s.group_size ? `${s.group_size}"` : ''}
+                onPress={() => go(`/session/${s.id}`)}
+              />
+            );
+          })}
+        </Section>
+      )}
+
+      <Section>
+        <Item icon="cloud-download-outline" label="Import Garmin CSVs" onPress={() => go('/import')} />
+        <Item icon="log-out-outline" tone="danger" label="Sign out" chevron={false} onPress={signOut} />
+      </Section>
     </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({
-  logo:      { fontSize: 18, fontWeight: '800', color: C.accent, letterSpacing: 1.5, marginBottom: 20 },
-  statsRow:  { flexDirection: 'row', gap: 8, marginBottom: 8 },
-  statCard:  { flex: 1, backgroundColor: C.surface, borderRadius: 8, borderWidth: 1, borderColor: C.border, padding: 12, alignItems: 'center' },
-  statVal:   { fontSize: 22, fontWeight: '800', color: C.accent },
-  statLbl:   { fontSize: 10, color: C.muted, marginTop: 2 },
-  loadRifle: { fontSize: 14, fontWeight: '700', color: C.text },
-  loadSub:   { fontSize: 12, color: C.textSoft, marginTop: 3 },
-  loadVel:   { fontSize: 12, color: C.green, marginTop: 3, fontWeight: '600' },
-  quickRow:  { flexDirection: 'row', gap: 8 },
-  quickBtn:  { flex: 1, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 8, padding: 12, alignItems: 'center' },
-  quickBtnText: { color: C.accent, fontWeight: '600', fontSize: 13 },
+function Quick({ icon, label, onPress }: { icon: IconName; label: string; onPress: () => void }) {
+  return (
+    <TouchableOpacity style={st.quick} onPress={onPress} activeOpacity={0.7}>
+      <Ionicons name={icon} size={22} color={C.accent} />
+      <Text style={st.quickText}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
+const st = StyleSheet.create({
+  quickRow:    { flexDirection: 'row', gap: 10, marginTop: 20 },
+  quick:       { flex: 1, backgroundColor: C.card, borderRadius: 14, paddingVertical: 14, alignItems: 'center', gap: 6 },
+  quickText:   { color: C.text, fontSize: 13, fontWeight: '600' },
+  banner:      { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: C.orange + '14', borderRadius: 14, padding: 14, marginTop: 18 },
+  bannerTitle: { color: C.text, fontWeight: '700', fontSize: 15 },
+  bannerText:  { color: C.textSoft, fontSize: 13, marginTop: 2 },
 });

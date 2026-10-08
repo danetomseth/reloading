@@ -1,19 +1,21 @@
 import { StyleSheet } from 'react-native';
 
+// Palette (yours). `line` is the hairline between rows inside a card.
 export const C = {
   bg:        '#0a0e17',  // base
   surface:   '#141d2e',  // inputs / bars — lifted off bg
   card:      '#1b2740',  // cards — clearly distinct from bg
-  border:    '#2b3b56',  // more visible edges = crisper separation
+  border:    '#2b3b56',  // input edges
   borderHi:  '#3b5075',
-  accent:    '#4d8dff',  // slightly brighter blue for pop
+  line:      '#26344d',  // separators inside cards
+  accent:    '#4d8dff',
   green:     '#2fd672',
   orange:    '#f9a83a',
   red:       '#f2565a',
   purple:    '#9b7cff',
-  muted:     '#6c81a0',  // placeholders/hints — readable, not dim
-  textSoft:  '#a1b6d2',  // secondary text + labels — clearly legible
-  text:      '#eef3fb',  // primary text — crisp near-white
+  muted:     '#6c81a0',  // placeholders/hints
+  textSoft:  '#a1b6d2',  // secondary text + labels
+  text:      '#eef3fb',  // primary text
   white:     '#ffffff',
 };
 
@@ -25,58 +27,51 @@ export const statusColor = (status: string) =>
   status === 'promising' ? C.orange :
   status === 'retired'   ? C.muted  : C.textSoft;
 
+// One family (system), hierarchy by size and weight. Numbers use tabular figures.
+export const Type = StyleSheet.create({
+  display:  { fontSize: 30, fontWeight: '800', color: C.text, letterSpacing: 0.2 },
+  title:    { fontSize: 22, fontWeight: '800', color: C.text },
+  headline: { fontSize: 17, fontWeight: '700', color: C.text },
+  body:     { fontSize: 15, color: C.text },
+  sub:      { fontSize: 13, color: C.textSoft },
+  caption:  { fontSize: 12, color: C.muted },
+  num:      { fontVariant: ['tabular-nums'] },
+});
+
 export const commonStyles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: C.bg,
-  },
-  content: {
-    padding: 16,
-    paddingBottom: 60,
-  },
-  center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: C.bg,
-  },
+  screen:  { flex: 1, backgroundColor: C.bg },
+  content: { padding: 16, paddingBottom: 80 },
+  center:  { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: C.bg },
   card: {
     backgroundColor: C.card,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: C.border,
+    borderRadius: 14,
     padding: 16,
     marginBottom: 12,
   },
   label: {
-    fontSize: 11,
-    fontWeight: '700' as const,
+    fontSize: 13,
+    fontWeight: '600' as const,
     color: C.textSoft,
-    letterSpacing: 0.5,
-    textTransform: 'uppercase' as const,
     marginBottom: 6,
   },
   input: {
     backgroundColor: C.surface,
     borderWidth: 1,
     borderColor: C.border,
-    borderRadius: 8,
+    borderRadius: 10,
     color: C.text,
-    fontSize: 15,
-    padding: 12,
+    fontSize: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
     marginBottom: 12,
   },
   sectionTitle: {
-    fontSize: 12,
-    fontWeight: '800' as const,
-    color: C.accent,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase' as const,
-    marginTop: 18,
-    marginBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: C.border,
-    paddingBottom: 6,
+    fontSize: 13,
+    fontWeight: '600' as const,
+    color: C.textSoft,
+    marginTop: 22,
+    marginBottom: 8,
+    marginLeft: 4,
   },
   fab: {
     position: 'absolute' as const,
@@ -88,36 +83,34 @@ export const commonStyles = StyleSheet.create({
     backgroundColor: C.accent,
     justifyContent: 'center' as const,
     alignItems: 'center' as const,
-    shadowColor: C.accent,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.35,
     shadowRadius: 8,
     elevation: 8,
   },
   primaryBtn: {
     backgroundColor: C.accent,
-    borderRadius: 8,
-    padding: 14,
+    borderRadius: 12,
+    paddingVertical: 15,
     alignItems: 'center' as const,
     marginTop: 16,
   },
   primaryBtnText: {
     color: C.white,
     fontWeight: '700' as const,
-    fontSize: 15,
+    fontSize: 16,
   },
   dangerBtn: {
     backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: C.red,
-    borderRadius: 8,
-    padding: 14,
+    borderRadius: 12,
+    paddingVertical: 15,
     alignItems: 'center' as const,
-    marginTop: 10,
+    marginTop: 6,
   },
   dangerBtnText: {
     color: C.red,
-    fontWeight: '700' as const,
+    fontWeight: '600' as const,
     fontSize: 15,
   },
 });

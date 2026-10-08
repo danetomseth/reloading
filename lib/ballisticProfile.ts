@@ -8,6 +8,7 @@ import type { DragModelName, DsfPoint } from './ballistics/drag';
 import { Atmosphere, pressureAtAltitude } from './ballistics/atmosphere';
 import type { Conditions, RifleSetup, SolveInput } from './ballistics/solver';
 import type { AngleUnit, TempPoint } from './ballistics/truing';
+import type { PlottedGroup } from './groups';
 
 export type TruingLogEntry = { date: string; step: 'mv' | 'bc' | 'drop' | 'reset'; summary: string };
 
@@ -27,6 +28,7 @@ export type BallisticProfile = {
   diameterIn?: number;
   lengthIn?: number;
   log?: TruingLogEntry[];
+  groups?: PlottedGroup[]; // shots plotted on the target screen
 };
 
 export function num(s: unknown): number | null {

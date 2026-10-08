@@ -1,41 +1,30 @@
 import { Tabs } from 'expo-router';
-import { TouchableOpacity, Alert } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { supabase } from '../../lib/supabase';
 import { C } from '../../lib/theme';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
-const signOut = () => Alert.alert('Sign out', 'Sign out of your account?', [
-  { text: 'Cancel', style: 'cancel' },
-  { text: 'Sign out', style: 'destructive', onPress: () => { supabase.auth.signOut(); } },
-]);
-
-const tabs: { name: string; title: string; icon: IconName }[] = [
-  { name: 'index',      title: 'Home',       icon: 'home-outline' },
-  { name: 'rifles',     title: 'Rifles',     icon: 'list-outline' },
-  { name: 'reloads',    title: 'Reloads',    icon: 'layers-outline' },
-  { name: 'fieldlog',   title: 'Field Log',  icon: 'compass-outline' },
-  { name: 'dope',       title: 'Dope',       icon: 'grid-outline' },
-  { name: 'ballistics', title: 'Ballistics', icon: 'analytics-outline' },
+const tabs: { name: string; title: string; icon: IconName; iconOn: IconName; header?: boolean }[] = [
+  { name: 'index',      title: 'Home',       icon: 'home-outline',      iconOn: 'home', header: false },
+  { name: 'rifles',     title: 'Rifles',     icon: 'locate-outline',    iconOn: 'locate' },
+  { name: 'reloads',    title: 'Loads',      icon: 'layers-outline',    iconOn: 'layers' },
+  { name: 'fieldlog',   title: 'Field log',  icon: 'clipboard-outline', iconOn: 'clipboard' },
+  { name: 'ballistics', title: 'Ballistics', icon: 'analytics-outline', iconOn: 'analytics' },
 ];
 
 export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarStyle: { backgroundColor: C.surface, borderTopColor: C.border, borderTopWidth: 1 },
+        tabBarStyle: { backgroundColor: C.surface, borderTopColor: C.border, borderTopWidth: StyleSheet.hairlineWidth },
         tabBarActiveTintColor: C.accent,
         tabBarInactiveTintColor: C.muted,
         tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
-        headerStyle: { backgroundColor: C.surface },
+        headerStyle: { backgroundColor: C.bg },
+        headerShadowVisible: false,
         headerTintColor: C.text,
         headerTitleStyle: { fontWeight: '800', fontSize: 18 },
-        headerRight: () => (
-          <TouchableOpacity onPress={signOut} style={{ marginRight: 16 }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <Ionicons name="log-out-outline" size={22} color={C.textSoft} />
-          </TouchableOpacity>
-        ),
       }}
     >
       {tabs.map(t => (
@@ -44,9 +33,8 @@ export default function TabLayout() {
           name={t.name}
           options={{
             title: t.title,
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name={t.icon} size={size} color={color} />
-            ),
+            headerShown: t.header !== false,
+            tabBarIcon: ({ color, size, focused }) => <Ionicons name={focused ? t.iconOn : t.icon} size={size} color={color} />,
           }}
         />
       ))}
