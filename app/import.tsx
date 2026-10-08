@@ -5,7 +5,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { File } from 'expo-file-system';
 import { Ionicons } from '@expo/vector-icons';
 import { db, Rifle, Load, uid } from '../lib/supabase';
-import { C, commonStyles } from '../lib/theme';
+import { C, commonStyles, F } from '../lib/theme';
 import {
   parseShotView, ParsedXero, matchRifle, matchLoad, alreadyImported,
   buildNewLoad, mergeIntoLoad, MATCH_THRESHOLD,
@@ -272,25 +272,25 @@ const Chip = ({ label, on, onPress }: { label: string; on: boolean; onPress: () 
 );
 
 const styles = StyleSheet.create({
-  intro:      { color: C.textSoft, fontSize: 13, lineHeight: 19, marginBottom: 16 },
+  intro:      { fontFamily: F.regular, color: C.textSoft, fontSize: 13, lineHeight: 19, marginBottom: 16 },
   pickBtn:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: C.accent + '18', borderWidth: 1, borderColor: C.accent, borderRadius: 8, padding: 13 },
-  pickText:   { color: C.accent, fontWeight: '700', fontSize: 14 },
+  pickText:   { color: C.accent, fontFamily: F.bold, fontSize: 14 },
   resultCard: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.green + '18', borderWidth: 1, borderColor: C.green + '55', borderRadius: 8, padding: 12, marginTop: 14 },
-  resultText: { color: C.text, fontSize: 13, flex: 1 },
+  resultText: { fontFamily: F.regular, color: C.text, fontSize: 13, flex: 1 },
   cardHead:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  cardTitle:  { color: C.text, fontSize: 15, fontWeight: '700', flex: 1 },
+  cardTitle:  { color: C.text, fontSize: 15, fontFamily: F.bold, flex: 1 },
   stats:      { flexDirection: 'row', gap: 16, marginBottom: 6 },
   stat:       {},
-  statLabel:  { color: C.muted, fontSize: 9, fontWeight: '700', letterSpacing: 0.6 },
-  statValue:  { color: C.text, fontSize: 15, fontWeight: '700', marginTop: 1 },
-  date:       { color: C.textSoft, fontSize: 12, marginBottom: 12 },
-  miniLabel:  { color: C.muted, fontSize: 9, fontWeight: '700', letterSpacing: 0.8, marginBottom: 6 },
+  statLabel:  { color: C.muted, fontSize: 9, fontFamily: F.bold, letterSpacing: 0.6 },
+  statValue:  { color: C.text, fontSize: 15, fontFamily: F.bold, marginTop: 1 },
+  date:       { fontFamily: F.regular, color: C.textSoft, fontSize: 12, marginBottom: 12 },
+  miniLabel:  { color: C.muted, fontSize: 9, fontFamily: F.bold, letterSpacing: 0.8, marginBottom: 6 },
   chip:       { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 18, borderWidth: 1, borderColor: C.border, backgroundColor: C.surface, marginRight: 8 },
   chipOn:     { backgroundColor: C.accent + '22', borderColor: C.accent },
-  chipText:   { color: C.muted, fontSize: 12, fontWeight: '600' },
+  chipText:   { color: C.muted, fontSize: 12, fontFamily: F.semibold },
   chipTextOn: { color: C.accent },
   destRow:    { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 6, padding: 9, marginTop: 4 },
-  destText:   { color: C.textSoft, fontSize: 12, flex: 1 },
+  destText:   { fontFamily: F.regular, color: C.textSoft, fontSize: 12, flex: 1 },
   doneBtn:    { padding: 14, alignItems: 'center', marginTop: 10 },
-  doneText:   { color: C.accent, fontWeight: '700', fontSize: 15 },
+  doneText:   { color: C.accent, fontFamily: F.bold, fontSize: 15 },
 });

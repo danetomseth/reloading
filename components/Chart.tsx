@@ -2,7 +2,7 @@
 // with an over-the-air update. Line segments are rotated thin Views.
 import { Fragment, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { C } from '../lib/theme';
+import { C, F } from '../lib/theme';
 
 export type ChartPoint = { x: number; y: number; err?: number };
 export type ChartSeries = { points: ChartPoint[]; color?: string; line?: boolean; dots?: boolean; thickness?: number };
@@ -149,14 +149,14 @@ export function ColumnChart({ items, height = 110, color = C.accent, format }: {
 const st = StyleSheet.create({
   cols:     { flexDirection: 'row', alignItems: 'flex-end', gap: 6 },
   col:      { flex: 1, alignItems: 'center', justifyContent: 'flex-end' },
-  colValue: { fontSize: 11, color: C.textSoft, marginBottom: 4, fontVariant: ['tabular-nums'] },
-  colLabel: { fontSize: 11, color: C.muted, marginTop: 6 },
+  colValue: { fontFamily: F.numMedium, fontSize: 12, color: C.textSoft, marginBottom: 4, fontVariant: ['tabular-nums'] },
+  colLabel: { fontFamily: F.medium, fontSize: 12, color: C.muted, marginTop: 6 },
   grid:     { position: 'absolute', height: StyleSheet.hairlineWidth, backgroundColor: C.border },
-  yTick:    { position: 'absolute', left: 0, textAlign: 'right', fontSize: 10, color: C.muted, fontVariant: ['tabular-nums'] },
-  xTick:    { position: 'absolute', width: 64, textAlign: 'center', fontSize: 10, color: C.muted, fontVariant: ['tabular-nums'] },
+  yTick: { fontFamily: F.numMedium, position: 'absolute', left: 0, textAlign: 'right', fontSize: 11, color: C.muted, fontVariant: ['tabular-nums'] },
+  xTick: { fontFamily: F.numMedium, position: 'absolute', width: 64, textAlign: 'center', fontSize: 11, color: C.muted, fontVariant: ['tabular-nums'] },
   barRow:   { flexDirection: 'row', alignItems: 'center', paddingVertical: 7 },
-  barLabel: { width: 92, color: C.text, fontSize: 13, fontWeight: '600' },
+  barLabel: { fontFamily: F.medium, width: 92, color: C.text, fontSize: 14 },
   barTrack: { flex: 1, height: 10, borderRadius: 5, backgroundColor: C.surface, overflow: 'hidden', marginHorizontal: 10 },
   barFill:  { height: 10, borderRadius: 5 },
-  barValue: { width: 74, textAlign: 'right', color: C.textSoft, fontSize: 13, fontVariant: ['tabular-nums'] },
+  barValue: { fontFamily: F.numMedium, width: 78, textAlign: 'right', color: C.textSoft, fontSize: 15, fontVariant: ['tabular-nums'] },
 });

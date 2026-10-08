@@ -6,7 +6,7 @@ import { Stack, useLocalSearchParams } from 'expo-router';
 import * as DocumentPicker from 'expo-document-picker';
 import { File } from 'expo-file-system';
 import { db, Load, Rifle, Session } from '../../lib/supabase';
-import { C, commonStyles } from '../../lib/theme';
+import { C, commonStyles, F } from '../../lib/theme';
 import { cachedGet, cachedList } from '../../lib/cache';
 import { Button, Chips, Field, Note, Row, Segment, Stat, Table, TableRow, useDebounced } from '../../components/Form';
 import { belongsTo, rifleOf } from '../../lib/loadIds';
@@ -554,12 +554,12 @@ function DropStep({ profile, input, unit, saving, onSave }: {
 
 const styles = StyleSheet.create({
   profile:      { backgroundColor: C.card, borderWidth: 1, borderColor: C.borderHi, borderRadius: 8, padding: 12, marginBottom: 12 },
-  profileTitle: { color: C.text, fontSize: 15, fontWeight: '700' },
-  profileText:  { color: C.textSoft, fontSize: 13, marginTop: 3, lineHeight: 18 },
-  lead:         { color: C.textSoft, fontSize: 13, lineHeight: 19, marginBottom: 10 },
-  caption:      { color: C.muted, fontSize: 12, lineHeight: 17, marginBottom: 10 },
+  profileTitle: { color: C.text, fontSize: 15, fontFamily: F.bold },
+  profileText:  { fontFamily: F.regular, color: C.textSoft, fontSize: 13, marginTop: 3, lineHeight: 18 },
+  lead:         { fontFamily: F.regular, color: C.textSoft, fontSize: 13, lineHeight: 19, marginBottom: 10 },
+  caption:      { fontFamily: F.regular, color: C.muted, fontSize: 12, lineHeight: 17, marginBottom: 10 },
   switchRow:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
-  switchText:   { color: C.text, fontSize: 13, flex: 1 },
-  log:          { color: C.textSoft, fontSize: 12, marginBottom: 4 },
+  switchText:   { fontFamily: F.regular, color: C.text, fontSize: 13, flex: 1 },
+  log:          { fontFamily: F.regular, color: C.textSoft, fontSize: 12, marginBottom: 4 },
   chartCard:    { backgroundColor: C.card, borderRadius: 14, padding: 12, marginBottom: 12 },
 });

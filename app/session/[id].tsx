@@ -3,7 +3,7 @@ import { View, Text, ScrollView, TextInput, TouchableOpacity, StyleSheet, Alert,
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { db, Session, Rifle, Load, uid } from '../../lib/supabase';
 import { cachedList, cachedGet } from '../../lib/cache';
-import { C, Type, commonStyles } from '../../lib/theme';
+import { C, Type, commonStyles, F } from '../../lib/theme';
 import { belongsTo, rifleOf } from '../../lib/loadIds';
 import { atmoFromText, buildInput, num, readProfile, scopeUnit } from '../../lib/ballisticProfile';
 import { densityAltitude } from '../../lib/ballistics/atmosphere';
@@ -232,9 +232,9 @@ function Mini({ label, value, onChange }: { label: string; value: string; onChan
 const st = StyleSheet.create({
   rangeCard:  { backgroundColor: C.surface, borderRadius: 12, padding: 12 },
   rangeHead:  { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
-  rangeTitle: { color: C.text, fontSize: 14, fontWeight: '700' },
-  remove:     { color: C.red, fontSize: 13, fontWeight: '600' },
-  legend:     { color: C.muted, fontSize: 12, lineHeight: 17, marginTop: 4 },
-  miniLabel:  { color: C.textSoft, fontSize: 12, marginBottom: 4, marginTop: 6 },
-  miniInput:  { backgroundColor: C.bg, borderRadius: 8, color: C.text, fontSize: 15, paddingVertical: 8, paddingHorizontal: 10, fontVariant: ['tabular-nums'] },
+  rangeTitle: { color: C.text, fontSize: 14, fontFamily: F.bold },
+  remove:     { color: C.red, fontSize: 13, fontFamily: F.semibold },
+  legend:     { fontFamily: F.regular, color: C.muted, fontSize: 12, lineHeight: 17, marginTop: 4 },
+  miniLabel:  { fontFamily: F.regular, color: C.textSoft, fontSize: 12, marginBottom: 4, marginTop: 6 },
+  miniInput:  { fontFamily: F.regular, backgroundColor: C.bg, borderRadius: 8, color: C.text, fontSize: 15, paddingVertical: 8, paddingHorizontal: 10, fontVariant: ['tabular-nums'] },
 });

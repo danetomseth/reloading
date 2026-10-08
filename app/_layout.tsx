@@ -3,10 +3,11 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as SplashScreen from 'expo-splash-screen';
+import { useFonts } from 'expo-font';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
-import { C } from '../lib/theme';
+import { C, FONTS, isDark, F } from '../lib/theme';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -20,6 +21,8 @@ export default function RootLayout() {
   const [ready, setReady] = useState(false);
   const segments = useSegments();
   const router = useRouter();
+  const [fontsLoaded, fontError] = useFonts(FONTS);
+  const fontsReady = fontsLoaded || !!fontError;
 
   useEffect(() => {
     let settled = false;
@@ -67,26 +70,28 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
-    if (ready && everSignedIn !== null) SplashScreen.hideAsync();
-  }, [ready, everSignedIn]);
+    if (ready && everSignedIn !== null && fontsReady) SplashScreen.hideAsync();
+  }, [ready, everSignedIn, fontsReady]);
 
   useEffect(() => {
-    if (!ready || everSignedIn === null) return;
+    if (!ready || everSignedIn === null || !fontsReady) return;
     const onLogin = segments[0] === 'login';
     // only force login if there's no session AND this device has never signed in
     if (!session && !everSignedIn && !onLogin) router.replace('/login');
     else if (session && onLogin) router.replace('/');
-  }, [ready, session, everSignedIn, segments]);
+  }, [ready, session, everSignedIn, segments, fontsReady]);
+
+  if (!fontsReady) return null;
 
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: C.bg }}>
-      <StatusBar style="light" />
+      <StatusBar style={isDark ? 'light' : 'dark'} />
       <Stack
         screenOptions={{
           headerStyle: { backgroundColor: C.bg },
           headerShadowVisible: false,
           headerTintColor: C.text,
-          headerTitleStyle: { fontWeight: '800', fontSize: 18 },
+          headerTitleStyle: { fontFamily: F.bold, fontSize: 18 },
           headerBackButtonDisplayMode: 'minimal',
           contentStyle: { backgroundColor: C.bg },
         }}

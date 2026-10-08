@@ -3,7 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert, Switch, Sh
 import { useFocusEffect, useRouter } from 'expo-router';
 import { db, Load, Rifle } from '../../lib/supabase';
 import { cachedList } from '../../lib/cache';
-import { C, Type, commonStyles } from '../../lib/theme';
+import { C, Type, commonStyles, F } from '../../lib/theme';
 import { Button, Chips, Disclosure, InputItem, Note, Section, Segment, useDebounced } from '../../components/Form';
 import { BarList, LineChart } from '../../components/Chart';
 import { Reticle, WindDial } from '../../components/Visuals';
@@ -395,27 +395,27 @@ export default function Ballistics() {
 }
 
 const st = StyleSheet.create({
-  caption:     { color: C.muted, fontSize: 12, lineHeight: 17, marginTop: 6, marginBottom: 10 },
+  caption:     { fontFamily: F.regular, color: C.muted, fontSize: 12, lineHeight: 17, marginTop: 6, marginBottom: 10 },
   summary:     { backgroundColor: C.card, borderRadius: 14, padding: 14, marginTop: 4 },
-  summaryMain: { color: C.text, fontSize: 17, fontWeight: '700', fontVariant: ['tabular-nums'] },
-  summarySub:  { color: C.textSoft, fontSize: 13, marginTop: 4, lineHeight: 18 },
+  summaryMain: { fontFamily: F.num, color: C.text, fontSize: 20, fontVariant: ['tabular-nums'] },
+  summarySub:  { fontFamily: F.regular, color: C.textSoft, fontSize: 13, marginTop: 4, lineHeight: 18 },
   segPad:      { paddingHorizontal: 12, paddingTop: 10 },
   windRow:     { flexDirection: 'row', alignItems: 'center' },
   windSide:    { flex: 1, marginLeft: 14 },
   speedBox:    { flexDirection: 'row', alignItems: 'baseline', backgroundColor: C.surface, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 6 },
-  speedInput:  { flex: 1, color: C.text, fontSize: 28, fontWeight: '800', fontVariant: ['tabular-nums'], padding: 0 },
-  speedUnit:   { color: C.muted, fontSize: 14 },
-  windDir:     { color: C.text, fontSize: 15, fontWeight: '600', marginTop: 10, marginBottom: 4 },
+  speedInput: { fontFamily: F.numBold, flex: 1, color: C.text, fontSize: 32, fontVariant: ['tabular-nums'], padding: 0 },
+  speedUnit:   { fontFamily: F.regular, color: C.muted, fontSize: 14 },
+  windDir:     { color: C.text, fontSize: 15, fontFamily: F.semibold, marginTop: 10, marginBottom: 4 },
   chartCard:   { backgroundColor: C.card, borderRadius: 14, padding: 12, marginBottom: 12 },
   table:       { backgroundColor: C.card, borderRadius: 14, overflow: 'hidden' },
   thead:       { flexDirection: 'row', paddingVertical: 9, paddingHorizontal: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.line },
-  th:          { flex: 1, fontSize: 12, fontWeight: '600', color: C.textSoft, textAlign: 'right' },
+  th: { fontFamily: F.medium, flex: 1, fontSize: 13, color: C.textSoft, textAlign: 'right' },
   tr:          { flexDirection: 'row', paddingVertical: 10, paddingHorizontal: 12 },
   trLine:      { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: C.line },
   trOn:        { backgroundColor: C.accent + '1c' },
-  td:          { flex: 1, fontSize: 15, textAlign: 'right', fontVariant: ['tabular-nums'] },
+  td: { fontFamily: F.numMedium, flex: 1, fontSize: 17, textAlign: 'right', fontVariant: ['tabular-nums'] },
   first:       { textAlign: 'left', flex: 0.8 },
   reticleWrap: { alignItems: 'center', marginVertical: 8 },
-  reticleText: { color: C.text, fontSize: 16, fontWeight: '600', textAlign: 'center', marginTop: 8 },
+  reticleText: { fontFamily: F.semibold, color: C.text, fontSize: 17, textAlign: 'center', marginTop: 8 },
   switchRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 },
 });

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { C, commonStyles } from '../lib/theme';
+import { C, commonStyles, F } from '../lib/theme';
 import {
   POWDERS, Bullet, bulletDiameters, bulletsForDiameter, diameterLabel,
   suggestDiameter, computeSD,
@@ -97,16 +97,16 @@ const styles = StyleSheet.create({
   chev:       { paddingHorizontal: 8, paddingVertical: 8, marginLeft: 4 },
   dropdown:   { backgroundColor: C.surface, borderWidth: 1, borderColor: C.borderHi, borderRadius: 6, marginTop: 4, overflow: 'hidden' },
   option:     { paddingHorizontal: 12, paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: C.border },
-  optionText: { color: C.text, fontSize: 14 },
+  optionText: { fontFamily: F.regular, color: C.text, fontSize: 14 },
 
   lib:        { backgroundColor: C.surface, borderWidth: 1, borderColor: C.borderHi, borderRadius: 8, padding: 12, marginBottom: 12 },
   libHead:    { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  libTitle:   { color: C.accent, fontSize: 13, fontWeight: '700', flex: 1 },
+  libTitle:   { color: C.accent, fontSize: 13, fontFamily: F.bold, flex: 1 },
   calChip:    { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1, borderColor: C.border, backgroundColor: C.bg, marginRight: 8 },
   calChipOn:  { backgroundColor: C.accent + '22', borderColor: C.accent },
-  calChipText:   { color: C.muted, fontSize: 12, fontWeight: '600' },
+  calChipText:   { color: C.muted, fontSize: 12, fontFamily: F.semibold },
   calChipTextOn: { color: C.accent },
   bRow:       { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderTopWidth: 1, borderTopColor: C.border },
-  bName:      { color: C.text, fontSize: 14, fontWeight: '600' },
-  bSpec:      { color: C.textSoft, fontSize: 12, marginTop: 2 },
+  bName:      { color: C.text, fontSize: 14, fontFamily: F.semibold },
+  bSpec:      { fontFamily: F.regular, color: C.textSoft, fontSize: 12, marginTop: 2 },
 });

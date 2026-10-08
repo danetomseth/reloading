@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { Image } from 'react-native';
 import { supabase } from '../lib/supabase';
-import { C } from '../lib/theme';
+import { C, F } from '../lib/theme';
 
 export default function Login() {
   const [mode,     setMode]     = useState<'signin' | 'signup'>('signin');
@@ -79,7 +79,7 @@ export default function Login() {
 
         <TouchableOpacity style={styles.btn} onPress={submit} disabled={busy}>
           {busy
-            ? <ActivityIndicator color={C.white} />
+            ? <ActivityIndicator color={C.onAccent} />
             : <Text style={styles.btnText}>{mode === 'signin' ? 'Sign In' : 'Sign Up'}</Text>}
         </TouchableOpacity>
 
@@ -97,15 +97,15 @@ const styles = StyleSheet.create({
   screen:   { flex: 1, backgroundColor: C.bg },
   inner:    { flex: 1, justifyContent: 'center', padding: 28 },
   logo:     { width: 96, height: 96, alignSelf: 'center', marginBottom: 12 },
-  title:    { color: C.text, fontSize: 26, fontWeight: '800', textAlign: 'center' },
-  subtitle: { color: C.textSoft, fontSize: 14, textAlign: 'center', marginTop: 4, marginBottom: 28 },
+  title:    { color: C.text, fontSize: 26, fontFamily: F.bold, textAlign: 'center' },
+  subtitle: { fontFamily: F.regular, color: C.textSoft, fontSize: 14, textAlign: 'center', marginTop: 4, marginBottom: 28 },
   input: {
     backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 8,
     color: C.text, fontSize: 15, padding: 13, marginBottom: 12,
   },
-  err:  { color: C.red, fontSize: 13, marginBottom: 10 },
-  msg:  { color: C.green, fontSize: 13, marginBottom: 10 },
+  err:  { fontFamily: F.regular, color: C.red, fontSize: 13, marginBottom: 10 },
+  msg:  { fontFamily: F.regular, color: C.green, fontSize: 13, marginBottom: 10 },
   btn:  { backgroundColor: C.accent, borderRadius: 8, padding: 15, alignItems: 'center', marginTop: 4 },
-  btnText: { color: C.white, fontWeight: '700', fontSize: 15 },
-  switch: { color: C.accent, fontSize: 13, textAlign: 'center', marginTop: 18 },
+  btnText: { color: C.onAccent, fontFamily: F.bold, fontSize: 15 },
+  switch: { fontFamily: F.regular, color: C.accent, fontSize: 13, textAlign: 'center', marginTop: 18 },
 });

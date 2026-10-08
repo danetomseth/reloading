@@ -1,11 +1,11 @@
 import { useState, useCallback, useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, RefreshControl, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, RefreshControl, StyleSheet, ActivityIndicator, Alert, DevSettings } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { db, supabase, Rifle, Load, Session } from '../../lib/supabase';
 import { cachedList } from '../../lib/cache';
-import { C, Type, commonStyles, statusColor } from '../../lib/theme';
+import { C, Type, commonStyles, statusColor, F, isDark, saveThemeMode, ThemeMode } from '../../lib/theme';
 import { IconName, Item, Section } from '../../components/Form';
 import { assignCodes, belongsTo, planUpgrade, rifleOf } from '../../lib/loadIds';
 import { headline, monthlyTotals, pickBest, recipe, shortDate } from '../../lib/metrics';
@@ -16,6 +16,16 @@ const signOut = () => Alert.alert('Sign out', 'Sign out of your account?', [
   { text: 'Cancel', style: 'cancel' },
   { text: 'Sign out', style: 'destructive', onPress: () => { supabase.auth.signOut(); } },
 ]);
+
+// styles are built at launch, so restart to switch
+const applyTheme = async (m: ThemeMode) => {
+  saveThemeMode(m);
+  try { await require('expo-updates').reloadAsync(); }
+  catch {
+    try { DevSettings.reload(); }
+    catch { Alert.alert('Restart to apply', 'Close and reopen the app to switch appearance.'); }
+  }
+};
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
@@ -126,6 +136,17 @@ export default function Home() {
         </Section>
       )}
 
+      <Section title="Appearance" footer="Light is easier to read in bright sun. The app restarts to apply it.">
+        {(['dark', 'light'] as const).map(m => {
+          const on = (isDark ? 'dark' : 'light') === m;
+          return (
+            <Item key={m} label={m === 'dark' ? 'Dark' : 'Light'} chevron={false}
+              right={on ? <Ionicons name="checkmark" size={20} color={C.accent} /> : undefined}
+              onPress={() => { if (!on) applyTheme(m); }} />
+          );
+        })}
+      </Section>
+
       <Section>
         <Item icon="cloud-download-outline" label="Import Garmin CSVs" onPress={() => go('/import')} />
         <Item icon="log-out-outline" tone="danger" label="Sign out" chevron={false} onPress={signOut} />
@@ -146,8 +167,8 @@ function Quick({ icon, label, onPress }: { icon: IconName; label: string; onPres
 const st = StyleSheet.create({
   quickRow:    { flexDirection: 'row', gap: 10, marginTop: 20 },
   quick:       { flex: 1, backgroundColor: C.card, borderRadius: 14, paddingVertical: 14, alignItems: 'center', gap: 6 },
-  quickText:   { color: C.text, fontSize: 13, fontWeight: '600' },
+  quickText:   { color: C.text, fontSize: 13, fontFamily: F.semibold },
   banner:      { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: C.orange + '14', borderRadius: 14, padding: 14, marginTop: 18 },
-  bannerTitle: { color: C.text, fontWeight: '700', fontSize: 15 },
-  bannerText:  { color: C.textSoft, fontSize: 13, marginTop: 2 },
+  bannerTitle: { color: C.text, fontFamily: F.bold, fontSize: 15 },
+  bannerText:  { fontFamily: F.regular, color: C.textSoft, fontSize: 13, marginTop: 2 },
 });

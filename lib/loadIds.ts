@@ -88,8 +88,12 @@ export function assignCodes(rifles: Rifle[]): Record<string, string> {
   for (const r of ordered) {
     if (out[r.id]) continue;
     const base = deriveRifleCode(r.name, r.caliber);
-    let code = base, k = 2;
-    while (used.has(code)) code = cleanCode(base.slice(0, 7) + k++);
+    const LETTERS = 'BCDEFGHJKLMNPQRSTUVWXYZ';
+    let code = base;
+    for (let k = 0; used.has(code) && k < 60; k++) {
+      // a digit suffix on a code ending in a digit reads as a different caliber (22 → 222)
+      code = cleanCode(base.slice(0, 7) + (/\d$/.test(base) ? LETTERS[k % LETTERS.length] : String(k + 2)));
+    }
     out[r.id] = code;
     used.add(code);
   }

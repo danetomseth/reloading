@@ -4,7 +4,7 @@
     "slug": "lrs-tracker-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "automatic",
     "scheme": "lrstracker",
     "icon": "./assets/icon.png",
     "ios": {

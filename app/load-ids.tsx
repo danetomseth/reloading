@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { db, Load, Rifle } from '../lib/supabase';
-import { C, commonStyles } from '../lib/theme';
+import { C, commonStyles, F } from '../lib/theme';
 import { allIds, assignCodes, cleanCode, planUpgrade } from '../lib/loadIds';
 
 export default function LoadIdUpgrade() {
@@ -157,21 +157,21 @@ export default function LoadIdUpgrade() {
 }
 
 const styles = StyleSheet.create({
-  intro:      { color: C.textSoft, fontSize: 13, lineHeight: 19, marginBottom: 8 },
-  sub:        { color: C.muted, fontSize: 12, marginBottom: 6 },
+  intro:      { fontFamily: F.regular, color: C.textSoft, fontSize: 13, lineHeight: 19, marginBottom: 8 },
+  sub:        { fontFamily: F.regular, color: C.muted, fontSize: 12, marginBottom: 6 },
   doneCard:   { backgroundColor: C.green + '18', borderWidth: 1, borderColor: C.green + '55', borderRadius: 8, padding: 12, marginVertical: 8 },
-  doneText:   { color: C.text, fontSize: 13 },
+  doneText:   { fontFamily: F.regular, color: C.text, fontSize: 13 },
   card:       { backgroundColor: C.card, borderWidth: 1, borderColor: C.border, borderRadius: 8, padding: 11, marginBottom: 8 },
   groupHead:  { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  codeInput:  { marginTop: 8, minWidth: 90, textAlign: 'center', backgroundColor: C.surface, borderWidth: 1, borderColor: C.borderHi, borderRadius: 6, color: C.accent, fontWeight: '800', fontSize: 15, paddingVertical: 6, paddingHorizontal: 10 },
+  codeInput:  { marginTop: 8, minWidth: 90, textAlign: 'center', backgroundColor: C.surface, borderWidth: 1, borderColor: C.borderHi, borderRadius: 6, color: C.accent, fontFamily: F.bold, fontSize: 15, paddingVertical: 6, paddingHorizontal: 10 },
   itemRow:    { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 7, borderBottomWidth: 1, borderBottomColor: C.border },
-  oldId:      { flex: 1, color: C.textSoft, fontSize: 13 },
-  arrow:      { color: C.muted, fontSize: 13 },
-  newId:      { color: C.text, fontSize: 14, fontWeight: '800', minWidth: 90, textAlign: 'right' },
+  oldId:      { fontFamily: F.regular, flex: 1, color: C.textSoft, fontSize: 13 },
+  arrow:      { fontFamily: F.regular, color: C.muted, fontSize: 13 },
+  newId:      { color: C.text, fontSize: 14, fontFamily: F.bold, minWidth: 90, textAlign: 'right' },
   chip:       { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1, borderColor: C.border, backgroundColor: C.surface, marginRight: 8 },
   chipOn:     { backgroundColor: C.accent + '22', borderColor: C.accent },
-  chipText:   { color: C.muted, fontSize: 12, fontWeight: '600' },
+  chipText:   { color: C.muted, fontSize: 12, fontFamily: F.semibold },
   chipTextOn: { color: C.accent },
   backBtn:    { padding: 14, alignItems: 'center' },
-  backText:   { color: C.accent, fontWeight: '700', fontSize: 15 },
+  backText:   { color: C.accent, fontFamily: F.bold, fontSize: 15 },
 });

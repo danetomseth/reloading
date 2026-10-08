@@ -35,7 +35,7 @@ export function headline(l: Partial<Load>): string {
 export const recipe = (l: Partial<Load>) => [
   l.bullet ? `${l.bullet}${l.bullet_wt ? ` ${l.bullet_wt}gr` : ''}` : '',
   l.powder ? `${l.powder}${l.charge ? ` ${l.charge}gr` : ''}` : '',
-].filter(Boolean).join(' · ');
+].filter(Boolean).join(', ');
 
 // best load: status first, then tightest group, then lowest SD
 export function pickBest(loads: Load[]): Load | null {

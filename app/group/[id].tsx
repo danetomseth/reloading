@@ -4,7 +4,7 @@ import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { db, Group, Load, uid, parseLoadIds } from '../../lib/supabase';
 import { cachedList, cachedGet } from '../../lib/cache';
-import { C, commonStyles, statusColor } from '../../lib/theme';
+import { C, commonStyles, statusColor, F } from '../../lib/theme';
 
 const emptyGroup = (): Partial<Group> => ({
   id: uid(), name: '', load_ids: '[]', notes: '',
@@ -120,14 +120,14 @@ export default function GroupDetail() {
 const styles = StyleSheet.create({
   textarea:   { height: 80, textAlignVertical: 'top' },
   header:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  count:      { color: C.accent, fontSize: 12, fontWeight: '700' },
+  count:      { color: C.accent, fontSize: 12, fontFamily: F.bold },
   searchWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.surface, borderRadius: 8, borderWidth: 1, borderColor: C.border, paddingHorizontal: 12, paddingVertical: 8, marginBottom: 10 },
-  search:     { flex: 1, color: C.text, fontSize: 14 },
-  empty:      { color: C.muted, fontSize: 14, textAlign: 'center', marginVertical: 20 },
+  search:     { fontFamily: F.regular, flex: 1, color: C.text, fontSize: 14 },
+  empty:      { fontFamily: F.regular, color: C.muted, fontSize: 14, textAlign: 'center', marginVertical: 20 },
   loadRow:    { flexDirection: 'row', alignItems: 'center', backgroundColor: C.card, borderRadius: 8, borderWidth: 1, borderColor: C.border, padding: 12, marginBottom: 8 },
   loadRowOn:  { borderColor: C.accent, backgroundColor: C.accent + '12' },
-  loadRifle:  { fontSize: 14, fontWeight: '700', color: C.text },
-  loadSub:    { fontSize: 12, color: C.textSoft, marginTop: 2 },
+  loadRifle:  { fontSize: 14, fontFamily: F.bold, color: C.text },
+  loadSub:    { fontFamily: F.regular, fontSize: 12, color: C.textSoft, marginTop: 2 },
   badge:      { borderWidth: 1, borderRadius: 4, paddingHorizontal: 8, paddingVertical: 3 },
-  badgeText:  { fontSize: 10, fontWeight: '700' },
+  badgeText:  { fontSize: 10, fontFamily: F.bold },
 });

@@ -6,7 +6,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { db, Load, Rifle, uid } from '../../lib/supabase';
 import { cachedGet, cachedList } from '../../lib/cache';
-import { C, Type, commonStyles } from '../../lib/theme';
+import { C, Type, commonStyles, F } from '../../lib/theme';
 import { Button, Chips, EmptyState, HeaderButton, InputItem, Item, Note, Section, StatStrip, ToggleItem } from '../../components/Form';
 import { TargetPlot } from '../../components/Visuals';
 import { rifleOf } from '../../lib/loadIds';
@@ -125,6 +125,6 @@ export default function TargetScreen() {
 const st = StyleSheet.create({
   actions:    { flexDirection: 'row', alignItems: 'center', gap: 18, marginTop: 12, marginBottom: 6 },
   action:     { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  actionText: { color: C.accent, fontSize: 15, fontWeight: '600' },
-  count:      { marginLeft: 'auto', color: C.textSoft, fontSize: 14, fontVariant: ['tabular-nums'] },
+  actionText: { color: C.accent, fontSize: 15, fontFamily: F.semibold },
+  count:      { fontFamily: F.regular, marginLeft: 'auto', color: C.textSoft, fontSize: 14, fontVariant: ['tabular-nums'] },
 });

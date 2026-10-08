@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Pressable, GestureResponderEvent } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { C } from '../lib/theme';
+import { C, F } from '../lib/theme';
 import { Shot, groupStats } from '../lib/groups';
 
 function Line({ x1, y1, x2, y2, color, th = 1.5 }: { x1: number; y1: number; x2: number; y2: number; color: string; th?: number }) {
@@ -143,21 +143,21 @@ export function TargetPlot({ shots, halfIn, onAdd }: { shots: Shot[]; halfIn: nu
 const st = StyleSheet.create({
   lens:       { position: 'absolute', backgroundColor: '#e9edf2', borderWidth: 6, borderColor: '#05070b' },
   tick:       { position: 'absolute', backgroundColor: '#161b24' },
-  rLabel:     { position: 'absolute', width: 28, textAlign: 'center', fontSize: 10, color: '#3b4556', fontVariant: ['tabular-nums'] },
+  rLabel: { fontFamily: F.numMedium, position: 'absolute', width: 28, textAlign: 'center', fontSize: 11, color: '#3b4556', fontVariant: ['tabular-nums'] },
   holdRing:   { position: 'absolute', width: 26, height: 26, borderRadius: 13, borderWidth: 2, borderColor: '#e5484d' },
   holdDot:    { position: 'absolute', width: 10, height: 10, borderRadius: 5, backgroundColor: '#e5484d' },
   dialRing:   { position: 'absolute', borderWidth: 1, borderColor: C.border },
   hour:       { position: 'absolute', width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
   hourOn:     { backgroundColor: C.accent },
-  hourText:   { color: C.textSoft, fontSize: 13, fontWeight: '600', fontVariant: ['tabular-nums'] },
-  hourTextOn: { color: C.white },
+  hourText: { fontFamily: F.numMedium, color: C.textSoft, fontSize: 15, fontVariant: ['tabular-nums'] },
+  hourTextOn: { color: C.onAccent },
   dialCenter: { position: 'absolute', width: 48, height: 48, borderRadius: 24, backgroundColor: C.surface, alignItems: 'center', justifyContent: 'center' },
   paper:      { width: '100%', aspectRatio: 1, backgroundColor: '#f2efe8', borderRadius: 14, overflow: 'hidden' },
   grid:       { position: 'absolute', backgroundColor: '#c9c3b5' },
   aim:        { position: 'absolute', backgroundColor: C.orange },
   mrRing:     { position: 'absolute', borderWidth: 1.5, borderColor: C.accent, borderStyle: 'dashed' },
   hole:       { position: 'absolute', width: 16, height: 16, borderRadius: 8, backgroundColor: '#1b1f27', alignItems: 'center', justifyContent: 'center' },
-  holeText:   { color: '#fff', fontSize: 9, fontWeight: '700' },
+  holeText: { fontFamily: F.numBold, color: '#fff', fontSize: 10 },
   center:     { position: 'absolute', backgroundColor: C.accent },
-  scaleText:  { position: 'absolute', right: 8, bottom: 6, fontSize: 11, color: '#7b7466' },
+  scaleText:  { fontFamily: F.regular, position: 'absolute', right: 8, bottom: 6, fontSize: 11, color: '#7b7466' },
 });

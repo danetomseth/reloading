@@ -4,7 +4,7 @@ import { useRouter, useFocusEffect, Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { db, Load, Rifle, Group, parseLoadIds } from '../../lib/supabase';
 import { cachedList } from '../../lib/cache';
-import { C, commonStyles, statusColor } from '../../lib/theme';
+import { C, commonStyles, statusColor, F } from '../../lib/theme';
 import { Chips, EmptyState, HeaderButton, Item, Section, Segment } from '../../components/Form';
 import { allIds, assignCodes, belongsTo, parseLoadId, planUpgrade, rifleOf } from '../../lib/loadIds';
 import { headline, recipe } from '../../lib/metrics';
@@ -154,8 +154,8 @@ export default function Reloads() {
 const st = StyleSheet.create({
   top:         { paddingHorizontal: 16, paddingTop: 8 },
   search:      { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.surface, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9, marginBottom: 12 },
-  searchInput: { flex: 1, color: C.text, fontSize: 16, padding: 0 },
+  searchInput: { fontFamily: F.regular, flex: 1, color: C.text, fontSize: 16, padding: 0 },
   banner:      { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: C.orange + '14', borderRadius: 14, padding: 14, marginBottom: 14 },
-  bannerTitle: { color: C.text, fontWeight: '700', fontSize: 15 },
-  bannerText:  { color: C.textSoft, fontSize: 13, marginTop: 2 },
+  bannerTitle: { color: C.text, fontFamily: F.bold, fontSize: 15 },
+  bannerText:  { fontFamily: F.regular, color: C.textSoft, fontSize: 13, marginTop: 2 },
 });
