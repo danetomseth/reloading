@@ -1,5 +1,7 @@
 // Group analyzer: tap where each shot hit. Mean radius uses every shot, so it
-// compares loads with fewer shots than extreme spread; both are shown.
+// compares loads with fewer shots than extreme spread; both are shown. Tap a
+// hole to leave it out of the stats (a called flier); it stays on the target.
+// With ?group=<id> it reopens a saved group for editing.
 import { useEffect, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, Alert, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
@@ -17,7 +19,7 @@ import { PlottedGroup, Shot, groupStats, inchesToMoa, sampleNote } from '../../l
 const SCALES = [{ key: '1', label: '2" view' }, { key: '2', label: '4" view' }, { key: '4', label: '8" view' }, { key: '8', label: '16" view' }];
 
 export default function TargetScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, group: groupId } = useLocalSearchParams<{ id: string; group?: string }>();
   const router = useRouter();
   const [load,      setLoad]      = useState<Load | null>(null);
   const [rifles,    setRifles]    = useState<Rifle[]>([]);
@@ -25,7 +27,8 @@ export default function TargetScreen() {
   const [shots,     setShots]     = useState<Shot[]>([]);
   const [half,      setHalf]      = useState('2');
   const [distance,  setDistance]  = useState('100');
-  const [setResult, setSetResult] = useState(true);
+  const [setResult, setSetResult] = useState(!groupId);
+  const [editing,   setEditing]   = useState<PlottedGroup | null>(null);
   const [saving,    setSaving]    = useState(false);
 
   useEffect(() => {
@@ -37,9 +40,21 @@ export default function TargetScreen() {
       setLoad(l);
       setRifles(rs);
       if (l?.distance) setDistance(l.distance);
+      if (l && groupId) {
+        let raw: Record<string, unknown> = {};
+        try { raw = l.ballistics ? JSON.parse(l.ballistics) : {}; } catch { raw = {}; }
+        const g = (Array.isArray(raw.groups) ? (raw.groups as PlottedGroup[]) : []).find(x => x.id === groupId);
+        if (g) {
+          setEditing(g);
+          setShots(g.shots);
+          setDistance(String(g.distanceYd));
+          const reach = Math.max(...g.shots.map(s => Math.max(Math.abs(s.x), Math.abs(s.y))), 0);
+          setHalf((SCALES.find(c => Number(c.key) > reach) ?? SCALES[SCALES.length - 1]).key);
+        }
+      }
       setLoading(false);
     })();
-  }, [id]);
+  }, [id, groupId]);
 
   if (loading) return <View style={commonStyles.center}><ActivityIndicator color={C.accent} size="large" /></View>;
   if (!load) return <EmptyState icon="alert-circle-outline" title="Load not found" />;
@@ -48,7 +63,9 @@ export default function TargetScreen() {
   const stats = groupStats(shots);
   const dist = num(distance) ?? 100;
   const moa = (inches: number) => inchesToMoa(inches, dist);
-  const note = sampleNote(shots.length);
+  const outCount = shots.filter(s => s.out).length;
+  const note = sampleNote(stats?.n ?? 0);
+  const toggle = (i: number) => setShots(p => p.map((s, j) => (j === i ? { ...s, out: !s.out } : s)));
   const corr = (inches: number) => fromMil(-inches / (dist * 0.036), unit); // inches at range → dial
 
   const save = async () => {
@@ -56,9 +73,14 @@ export default function TargetScreen() {
     setSaving(true);
     let raw: Record<string, unknown> = {};
     try { raw = load.ballistics ? JSON.parse(load.ballistics) : {}; } catch { raw = {}; }
-    const group: PlottedGroup = { id: uid(), date: new Date().toISOString().slice(0, 10), distanceYd: dist, shots };
     const groups = Array.isArray(raw.groups) ? (raw.groups as PlottedGroup[]) : [];
-    const patch: Partial<Load> = { ballistics: JSON.stringify({ ...raw, groups: [...groups, group] }) };
+    const group: PlottedGroup = editing
+      ? { ...editing, distanceYd: dist, shots }
+      : { id: uid(), date: new Date().toISOString().slice(0, 10), distanceYd: dist, shots };
+    const next = editing && groups.some(g => g.id === editing.id)
+      ? groups.map(g => (g.id === editing.id ? group : g))
+      : [...groups, group];
+    const patch: Partial<Load> = { ballistics: JSON.stringify({ ...raw, groups: next }) };
     if (setResult) { patch.group_size = stats.es.toFixed(2); patch.distance = String(dist); }
     const { error } = await db.loads.update(load.id, patch);
     setSaving(false);
@@ -74,13 +96,13 @@ export default function TargetScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: 'Plot a group', headerRight: () => <HeaderButton label="Save" disabled={saving || !stats || stats.n < 2} onPress={save} /> }} />
+      <Stack.Screen options={{ title: editing ? 'Edit group' : 'Plot a group', headerRight: () => <HeaderButton label="Save" disabled={saving || !stats || stats.n < 2} onPress={save} /> }} />
       <ScrollView style={commonStyles.screen} contentContainerStyle={commonStyles.content}>
         <Text style={[Type.sub, { marginBottom: 12 }]}>
-          {`${load.load_id || 'Load'}: tap each bullet hole where it hit. The orange cross is your aim point.`}
+          {`${load.load_id || 'Load'}: tap each bullet hole where it hit. The orange cross is your aim point. Tap a plotted shot to leave it out of the stats, and again to count it.`}
         </Text>
         <Chips items={SCALES} selected={half} onSelect={setHalf} />
-        <TargetPlot shots={shots} halfIn={Number(half)} onAdd={s => setShots(p => [...p, s])} />
+        <TargetPlot shots={shots} halfIn={Number(half)} onAdd={s => setShots(p => [...p, s])} onToggle={toggle} />
         <View style={st.actions}>
           <TouchableOpacity style={st.action} disabled={!shots.length} onPress={() => setShots(p => p.slice(0, -1))}>
             <Ionicons name="arrow-undo-outline" size={16} color={shots.length ? C.accent : C.muted} />
@@ -90,7 +112,7 @@ export default function TargetScreen() {
             <Ionicons name="trash-outline" size={16} color={shots.length ? C.red : C.muted} />
             <Text style={[st.actionText, { color: shots.length ? C.red : C.muted }]}>Clear</Text>
           </TouchableOpacity>
-          <Text style={st.count}>{`${shots.length} shot${shots.length === 1 ? '' : 's'}`}</Text>
+          <Text style={st.count}>{`${shots.length} shot${shots.length === 1 ? '' : 's'}${outCount ? ` · ${outCount} left out` : ''}`}</Text>
         </View>
 
         {stats && stats.n >= 2 && (
@@ -101,6 +123,7 @@ export default function TargetScreen() {
               { label: 'ES ÷ MR', value: (stats.es / Math.max(stats.mr, 1e-6)).toFixed(1), sub: 'about 2.7 is typical' },
             ]} />
             <Section title="Shape and center" footer="Dashed circle is the mean radius around the group center (blue cross). Red line joins the two widest shots.">
+              {outCount > 0 && <Item label="Counted shots" value={`${stats.n} of ${shots.length}`} />}
               <Item label="Vertical spread (SD)" value={`${stats.sdy.toFixed(2)}" · ${moa(stats.sdy).toFixed(2)} MOA`} />
               <Item label="Horizontal spread (SD)" value={`${stats.sdx.toFixed(2)}" · ${moa(stats.sdx).toFixed(2)} MOA`} />
               <Item label="Center vs aim" value={`${Math.abs(stats.cy).toFixed(2)}" ${stats.cy >= 0 ? 'high' : 'low'}, ${Math.abs(stats.cx).toFixed(2)}" ${stats.cx >= 0 ? 'right' : 'left'}`} />
@@ -116,7 +139,7 @@ export default function TargetScreen() {
           <ToggleItem label="Use as this load's group result" value={setResult} onChange={setSetResult} />
         </Section>
 
-        <Button label={saving ? 'Saving…' : 'Save group'} onPress={save} disabled={saving || !stats || stats.n < 2} />
+        <Button label={saving ? 'Saving…' : editing ? 'Save changes' : 'Save group'} onPress={save} disabled={saving || !stats || stats.n < 2} />
       </ScrollView>
     </>
   );

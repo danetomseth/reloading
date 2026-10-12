@@ -83,7 +83,10 @@ export function WindDial({ clock, onChange, size = 156 }: { clock: number; onCha
 
 // ── target plot ─────────────────────────────────────────────────────────────
 // Tap to add a shot. Coordinates are inches from the aim point (+ right, + up).
-export function TargetPlot({ shots, halfIn, onAdd }: { shots: Shot[]; halfIn: number; onAdd?: (s: Shot) => void }) {
+// Tapping a plotted hole calls onToggle, which marks it out of the stats.
+export function TargetPlot({ shots, halfIn, onAdd, onToggle }: {
+  shots: Shot[]; halfIn: number; onAdd?: (s: Shot) => void; onToggle?: (index: number) => void;
+}) {
   const [w, setW] = useState(0);
   const stats = groupStats(shots);
   const scale = w > 0 ? w / (2 * halfIn) : 1;
@@ -122,11 +125,6 @@ export function TargetPlot({ shots, halfIn, onAdd }: { shots: Shot[]; halfIn: nu
           {stats?.esPair && (
             <Line x1={X(shots[stats.esPair[0]].x)} y1={Y(shots[stats.esPair[0]].y)} x2={X(shots[stats.esPair[1]].x)} y2={Y(shots[stats.esPair[1]].y)} color={C.red + 'aa'} th={1.5} />
           )}
-          {shots.map((s, i) => (
-            <View key={i} style={[st.hole, { left: X(s.x) - 8, top: Y(s.y) - 8 }]}>
-              <Text style={st.holeText}>{i + 1}</Text>
-            </View>
-          ))}
           {stats && stats.n >= 2 && (
             <>
               <View style={[st.center, { left: X(stats.cx) - 7, top: Y(stats.cy) - 0.75, width: 14, height: 1.5 }]} />
@@ -136,6 +134,13 @@ export function TargetPlot({ shots, halfIn, onAdd }: { shots: Shot[]; halfIn: nu
           <Text style={st.scaleText}>{`${grid}" grid`}</Text>
         </View>
       )}
+      {w > 0 && shots.map((s, i) => (
+        <Pressable key={i} disabled={!onToggle} onPress={() => onToggle?.(i)} hitSlop={6}
+          style={[st.hole, s.out && st.holeOut, { left: X(s.x) - 8, top: Y(s.y) - 8 }]}>
+          <Text style={[st.holeText, s.out && st.holeTextOut]}>{i + 1}</Text>
+          {s.out && <View pointerEvents="none" style={st.holeSlash} />}
+        </Pressable>
+      ))}
     </Pressable>
   );
 }
@@ -158,6 +163,9 @@ const st = StyleSheet.create({
   mrRing:     { position: 'absolute', borderWidth: 1.5, borderColor: C.accent, borderStyle: 'dashed' },
   hole:       { position: 'absolute', width: 16, height: 16, borderRadius: 8, backgroundColor: '#1b1f27', alignItems: 'center', justifyContent: 'center' },
   holeText: { fontFamily: F.numBold, color: '#fff', fontSize: 10 },
+  holeOut:    { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: '#9a9384', borderStyle: 'dashed' },
+  holeTextOut: { color: '#9a9384' },
+  holeSlash:  { position: 'absolute', width: 20, height: 1.5, backgroundColor: C.red, transform: [{ rotate: '-45deg' }] },
   center:     { position: 'absolute', backgroundColor: C.accent },
   scaleText:  { fontFamily: F.regular, position: 'absolute', right: 8, bottom: 6, fontSize: 11, color: '#7b7466' },
 });

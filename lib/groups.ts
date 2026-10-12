@@ -2,7 +2,9 @@
 // Mean radius uses every shot, so it resolves precision differences with
 // fewer shots than extreme spread; both are reported.
 
-export type Shot = { x: number; y: number };
+// A shot marked out (a called flier, a pull) stays plotted and stored but is
+// left out of every statistic.
+export type Shot = { x: number; y: number; out?: boolean };
 export type PlottedGroup = { id: string; date: string; distanceYd: number; shots: Shot[]; note?: string };
 export type GroupStats = {
   n: number; cx: number; cy: number;
@@ -30,7 +32,10 @@ export const mrPerSigma = (n: number) => factor(MR_PER_SIGMA, n);
 export const inchesToMoa = (inches: number, yd: number) => inches / ((yd / 100) * 1.047);
 export const moaToInches = (moa: number, yd: number) => moa * (yd / 100) * 1.047;
 
-export function groupStats(shots: Shot[]): GroupStats | null {
+// Stats over the counted shots only. esPair indexes into the full array.
+export function groupStats(all: Shot[]): GroupStats | null {
+  const idx = all.map((s, i) => (s.out ? -1 : i)).filter(i => i >= 0);
+  const shots = idx.map(i => all[i]);
   const n = shots.length;
   if (n === 0) return null;
   const cx = shots.reduce((a, s) => a + s.x, 0) / n;
@@ -40,7 +45,7 @@ export function groupStats(shots: Shot[]): GroupStats | null {
   let esPair: [number, number] | null = null;
   for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
     const d = Math.hypot(shots[i].x - shots[j].x, shots[i].y - shots[j].y);
-    if (d > es) { es = d; esPair = [i, j]; }
+    if (d > es) { es = d; esPair = [idx[i], idx[j]]; }
   }
   const sd = (vals: number[], m: number) => n > 1 ? Math.sqrt(vals.reduce((a, v) => a + (v - m) ** 2, 0) / (n - 1)) : 0;
   return { n, cx, cy, es, mr, sdx: sd(shots.map(s => s.x), cx), sdy: sd(shots.map(s => s.y), cy), esPair };

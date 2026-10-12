@@ -209,6 +209,12 @@ function LoadView({ load, rifles, groups, onEdit, onChanged }: {
   const plotted: PlottedGroup[] = readProfile(load, rifle).groups ?? [];
   const pooled = pooledPrecision(plotted);
 
+  const groupMenu = (g: PlottedGroup) => Alert.alert(`${shortDate(g.date)} at ${g.distanceYd} yd`, `${g.shots.length} shots plotted.`, [
+    { text: 'Edit shots', onPress: () => go(`/target/${load.id}?group=${g.id}`) },
+    { text: 'Delete', style: 'destructive', onPress: () => removeGroup(g) },
+    { text: 'Cancel', style: 'cancel' },
+  ]);
+
   const removeGroup = (g: PlottedGroup) => Alert.alert('Delete this group?', `${shortDate(g.date)} at ${g.distanceYd} yd, ${g.shots.length} shots.`, [
     { text: 'Cancel', style: 'cancel' },
     { text: 'Delete', style: 'destructive', onPress: async () => {
@@ -300,14 +306,14 @@ function LoadView({ load, rifles, groups, onEdit, onChanged }: {
 
         {plotted.length > 0 && (
           <Section title="Plotted groups" action="Plot another" onAction={() => go(`/target/${load.id}`)}
-            footer={pooled ? `Combined mean radius ${pooled.mrMoa.toFixed(2)} MOA over ${pooled.shots} shots. Tap a group to delete it.` : undefined}>
+            footer={pooled ? `Combined mean radius ${pooled.mrMoa.toFixed(2)} MOA over ${pooled.shots} shots. Tap a group to edit its shots or delete it.` : undefined}>
             {plotted.map(g => {
               const s = groupStats(g.shots);
               if (!s) return null;
               return (
-                <Item key={g.id} chevron={false} onPress={() => removeGroup(g)}
+                <Item key={g.id} chevron={false} onPress={() => groupMenu(g)}
                   label={`${shortDate(g.date)} · ${g.distanceYd} yd`}
-                  sub={`${s.n} shots · ES ${inchesToMoa(s.es, g.distanceYd).toFixed(2)} MOA`}
+                  sub={`${s.n} shots${s.n < g.shots.length ? ` (${g.shots.length - s.n} left out)` : ''} · ES ${inchesToMoa(s.es, g.distanceYd).toFixed(2)} MOA`}
                   value={`MR ${inchesToMoa(s.mr, g.distanceYd).toFixed(2)}`} />
               );
             })}
