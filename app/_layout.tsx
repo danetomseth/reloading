@@ -7,6 +7,7 @@ import { useFonts } from 'expo-font';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+import { startSync } from '../lib/cache';
 import { C, FONTS, isDark, F } from '../lib/theme';
 import { AppMode, getMode } from '../lib/mode';
 
@@ -85,6 +86,11 @@ export default function RootLayout() {
   }, [ready, session, everSignedIn, segments, fontsReady]);
 
   useEffect(() => { getMode().then(setModeState); }, []);
+
+  // keep a full copy of the data on the phone and push offline edits when back online
+  useEffect(() => {
+    if (ready && (session || everSignedIn)) startSync();
+  }, [ready, session, everSignedIn]);
 
   // once per launch (and after each sign-in): open Field mode if that's what
   // was used last, or ask which mode to use the first time

@@ -26,3 +26,8 @@ No new native modules: works with the existing dev build and Expo Go.
 
 Ballistics engine: `lib/ballistics/` (point-mass RK4, G1/G7, truing). After changing it, run
 `npx tsx scripts/validate-ballistics.ts` — it checks against reference trajectories and truing round trips.
+
+## Offline use
+All data (rifles, loads, sessions, groups) is kept on the phone and refreshed on every launch, foreground and pull-to-refresh, so everything is viewable with no signal.
+Edits made offline are saved on the phone straight away and synced in order when the connection returns; Home and Field mode show a banner while changes are waiting.
+The data layer is `lib/cache.ts` (reads: `cachedList` / `cachedGet`; writes go through `db.*` → `offlineWrite`). Signing out clears the offline copy.

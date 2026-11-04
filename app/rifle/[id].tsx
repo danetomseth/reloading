@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack, useFocusEffect } from 'expo-router';
-import { db, supabase, Rifle, Load, Session, uid } from '../../lib/supabase';
+import { db, Rifle, Load, Session, uid } from '../../lib/supabase';
 import { cachedGet, cachedList } from '../../lib/cache';
 import { C, Type, commonStyles, statusColor } from '../../lib/theme';
 import { Button, EmptyState, HeaderButton, InputItem, Item, NotesInput, Section, Segment, Table } from '../../components/Form';
@@ -200,10 +200,10 @@ function RifleEditor({ initial, isNew, rifles, onSaved, onCancel, onDeleted }: {
     const { error } = await db.rifles.upsert({ ...form, code, updated_at: now, created_at: form.created_at || now });
     if (!error && !isNew && initial.id && initial.name && initial.name !== form.name) {
       // keep loads and sessions attached after a rename
-      await supabase.from('loads').update({ rifle: form.name, rifle_id: initial.id }).eq('rifle', initial.name);
-      await supabase.from('loads').update({ rifle: form.name }).eq('rifle_id', initial.id);
-      await supabase.from('sessions').update({ rifle: form.name, rifle_id: initial.id }).eq('rifle', initial.name);
-      await supabase.from('sessions').update({ rifle: form.name }).eq('rifle_id', initial.id);
+      await db.loads.updateWhere('rifle', initial.name, { rifle: form.name, rifle_id: initial.id });
+      await db.loads.updateWhere('rifle_id', initial.id, { rifle: form.name });
+      await db.sessions.updateWhere('rifle', initial.name, { rifle: form.name, rifle_id: initial.id });
+      await db.sessions.updateWhere('rifle_id', initial.id, { rifle: form.name });
     }
     setSaving(false);
     if (error) { Alert.alert('Save failed', error.message + (/column/i.test(error.message) ? MIGRATION_HINT : '')); return; }

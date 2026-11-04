@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { db, Load, Rifle, Session } from '../lib/supabase';
 import { cachedList } from '../lib/cache';
+import { SyncStatus } from '../components/SyncStatus';
 import { C, F, Type, commonStyles } from '../lib/theme';
 import { Chips, EmptyState, InputItem, Section, Segment, useDebounced } from '../components/Form';
 import { Reticle, WindDial } from '../components/Visuals';
@@ -209,6 +210,7 @@ export default function Field() {
           <Text style={st.fullText}>Full app</Text>
         </TouchableOpacity>
       </View>
+      <SyncStatus style={{ marginHorizontal: 16, marginBottom: 8 }} />
       {picking && (
         <View style={st.picker}>
           <Chips items={rifles.map(r => ({ key: r.id, label: r.name }))} selected={s.rifleId} onSelect={pickRifle} />
