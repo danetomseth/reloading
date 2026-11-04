@@ -1,24 +1,7 @@
-import { createClient } from '@supabase/supabase-js';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { AppState } from 'react-native';
+import { supabase } from './client';
+import { offlineWrite } from './cache';
 
-const SUPABASE_URL = 'https://skbwtsanxkgxzdbaqhnm.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_4euvL4DCHv3nwS87gXpzXA_KbgwvuU7';
-
-export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
-  auth: {
-    storage: AsyncStorage,
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: false,
-  },
-});
-
-// keep the auth token fresh while the app is in the foreground
-AppState.addEventListener('change', (state) => {
-  if (state === 'active') supabase.auth.startAutoRefresh();
-  else supabase.auth.stopAutoRefresh();
-});
+export { supabase };
 
 export type Rifle = {
   id: string;
@@ -118,29 +101,39 @@ export const db = {
   rifles: {
     getAll: () => supabase.from('rifles').select('*').order('created_at', { ascending: false }),
     get: (id: string) => supabase.from('rifles').select('*').eq('id', id).single(),
-    upsert: (r: Partial<Rifle>) => supabase.from('rifles').upsert(r),
-    update: (id: string, patch: Partial<Rifle>) => supabase.from('rifles').update(patch).eq('id', id),
-    delete: (id: string) => supabase.from('rifles').delete().eq('id', id),
+    // writes go through the offline outbox: applied locally at once, synced when online
+    upsert: (row: Partial<Rifle>) => offlineWrite({ table: 'rifles', kind: 'upsert', row }),
+    update: (id: string, patch: Partial<Rifle>) => offlineWrite({ table: 'rifles', kind: 'update', rowId: id, patch }),
+    updateWhere: (column: keyof Rifle, value: string, patch: Partial<Rifle>) =>
+      offlineWrite({ table: 'rifles', kind: 'updateWhere', column: String(column), value, patch }),
+    delete: (id: string) => offlineWrite({ table: 'rifles', kind: 'delete', rowId: id }),
   },
   loads: {
     getAll: () => supabase.from('loads').select('*').order('created_at', { ascending: false }),
     get: (id: string) => supabase.from('loads').select('*').eq('id', id).single(),
-    upsert: (l: Partial<Load>) => supabase.from('loads').upsert(l),
-    update: (id: string, patch: Partial<Load>) => supabase.from('loads').update(patch).eq('id', id),
-    delete: (id: string) => supabase.from('loads').delete().eq('id', id),
+    // writes go through the offline outbox: applied locally at once, synced when online
+    upsert: (row: Partial<Load>) => offlineWrite({ table: 'loads', kind: 'upsert', row }),
+    update: (id: string, patch: Partial<Load>) => offlineWrite({ table: 'loads', kind: 'update', rowId: id, patch }),
+    updateWhere: (column: keyof Load, value: string, patch: Partial<Load>) =>
+      offlineWrite({ table: 'loads', kind: 'updateWhere', column: String(column), value, patch }),
+    delete: (id: string) => offlineWrite({ table: 'loads', kind: 'delete', rowId: id }),
   },
   sessions: {
     getAll: () => supabase.from('sessions').select('*').order('created_at', { ascending: false }),
     get: (id: string) => supabase.from('sessions').select('*').eq('id', id).single(),
-    upsert: (s: Partial<Session>) => supabase.from('sessions').upsert(s),
-    update: (id: string, patch: Partial<Session>) => supabase.from('sessions').update(patch).eq('id', id),
-    delete: (id: string) => supabase.from('sessions').delete().eq('id', id),
+    // writes go through the offline outbox: applied locally at once, synced when online
+    upsert: (row: Partial<Session>) => offlineWrite({ table: 'sessions', kind: 'upsert', row }),
+    update: (id: string, patch: Partial<Session>) => offlineWrite({ table: 'sessions', kind: 'update', rowId: id, patch }),
+    updateWhere: (column: keyof Session, value: string, patch: Partial<Session>) =>
+      offlineWrite({ table: 'sessions', kind: 'updateWhere', column: String(column), value, patch }),
+    delete: (id: string) => offlineWrite({ table: 'sessions', kind: 'delete', rowId: id }),
   },
   groups: {
     getAll: () => supabase.from('groups').select('*').order('created_at', { ascending: false }),
     get: (id: string) => supabase.from('groups').select('*').eq('id', id).single(),
-    upsert: (g: Partial<Group>) => supabase.from('groups').upsert(g),
-    delete: (id: string) => supabase.from('groups').delete().eq('id', id),
+    // writes go through the offline outbox: applied locally at once, synced when online
+    upsert: (row: Partial<Group>) => offlineWrite({ table: 'groups', kind: 'upsert', row }),
+    delete: (id: string) => offlineWrite({ table: 'groups', kind: 'delete', rowId: id }),
   },
 };
 

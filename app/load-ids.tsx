@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { db, Load, Rifle } from '../lib/supabase';
+import { cachedList } from '../lib/cache';
 import { C, commonStyles, F } from '../lib/theme';
 import { allIds, assignCodes, cleanCode, planUpgrade } from '../lib/loadIds';
 
@@ -18,10 +19,12 @@ export default function LoadIdUpgrade() {
   const [done,    setDone]    = useState<string | null>(null);
 
   const fetchAll = async () => {
-    const [r, l] = await Promise.all([db.rifles.getAll(), db.loads.getAll()]);
-    const rs: Rifle[] = r.data || [];
+    const [rs, ls] = await Promise.all([
+      cachedList<Rifle>('rifles', db.rifles.getAll()),
+      cachedList<Load>('loads', db.loads.getAll()),
+    ]);
     setRifles(rs);
-    setLoads(l.data || []);
+    setLoads(ls);
     setCodes(assignCodes(rs));
     setAssign({});
     setLoading(false);

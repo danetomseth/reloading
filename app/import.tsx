@@ -5,6 +5,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { File } from 'expo-file-system';
 import { Ionicons } from '@expo/vector-icons';
 import { db, Rifle, Load, uid } from '../lib/supabase';
+import { cachedList } from '../lib/cache';
 import { C, commonStyles, F } from '../lib/theme';
 import {
   parseShotView, ParsedXero, matchRifle, matchLoad, alreadyImported,
@@ -34,9 +35,12 @@ export default function Import() {
   const [result, setResult] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([db.rifles.getAll(), db.loads.getAll()]).then(([r, l]) => {
-      setRifles(r.data || []);
-      setLoads(l.data || []);
+    Promise.all([
+      cachedList<Rifle>('rifles', db.rifles.getAll()),
+      cachedList<Load>('loads', db.loads.getAll()),
+    ]).then(([r, l]) => {
+      setRifles(r);
+      setLoads(l);
       setReady(true);
     });
   }, []);

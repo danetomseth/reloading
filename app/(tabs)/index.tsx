@@ -4,7 +4,8 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { db, supabase, Rifle, Load, Session } from '../../lib/supabase';
-import { cachedList } from '../../lib/cache';
+import { cachedList, clearOfflineData, getSyncStatus, syncNow } from '../../lib/cache';
+import { SyncStatus } from '../../components/SyncStatus';
 import { C, Type, commonStyles, statusColor, F, isDark, saveThemeMode, ThemeMode } from '../../lib/theme';
 import { IconName, Item, Section } from '../../components/Form';
 import { assignCodes, belongsTo, planUpgrade, rifleOf } from '../../lib/loadIds';
@@ -13,10 +14,16 @@ import { setMode } from '../../lib/mode';
 import { num } from '../../lib/ballisticProfile';
 import { ColumnChart } from '../../components/Chart';
 
-const signOut = () => Alert.alert('Sign out', 'Sign out of your account?', [
-  { text: 'Cancel', style: 'cancel' },
-  { text: 'Sign out', style: 'destructive', onPress: () => { supabase.auth.signOut(); } },
-]);
+const signOut = () => {
+  const { pending } = getSyncStatus();
+  Alert.alert('Sign out', pending
+    ? `${pending} change${pending === 1 ? " hasn't" : "s haven't"} synced yet and will be lost. Sign out anyway?`
+    : 'Sign out of your account? Data saved on this phone for offline use is removed.', [
+    { text: 'Cancel', style: 'cancel' },
+    // clear the offline copy so the next account doesn't see this one's data
+    { text: 'Sign out', style: 'destructive', onPress: async () => { await clearOfflineData(); supabase.auth.signOut(); } },
+  ]);
+};
 
 // styles are built at launch, so restart to switch
 const applyTheme = async (m: ThemeMode) => {
@@ -75,12 +82,13 @@ export default function Home() {
     <ScrollView
       style={commonStyles.screen}
       contentContainerStyle={[commonStyles.content, { paddingTop: insets.top + 16 }]}
-      refreshControl={<RefreshControl refreshing={refresh} onRefresh={() => { setRefresh(true); fetchAll(); }} tintColor={C.accent} />}
+      refreshControl={<RefreshControl refreshing={refresh} onRefresh={async () => { setRefresh(true); await syncNow(); fetchAll(); }} tintColor={C.accent} />}
     >
       <Text style={Type.display}>LRS Tracker</Text>
       <Text style={[Type.sub, { marginTop: 4 }]}>
         {plural(rifles.length, 'rifle')}, {plural(loads.length, 'load')}, {plural(sessions.length, 'range session')}
       </Text>
+      <SyncStatus style={{ marginTop: 12 }} />
 
       <View style={st.quickRow}>
         <Quick icon="add-circle" label="New load" onPress={() => go('/load/new')} />
