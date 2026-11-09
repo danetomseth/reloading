@@ -11,8 +11,8 @@ import { cachedGet, cachedList } from '../../lib/cache';
 import { Button, Chips, Field, Note, Row, Segment, Stat, Table, TableRow, useDebounced } from '../../components/Form';
 import { belongsTo, rifleOf } from '../../lib/loadIds';
 import {
-  AtmoText, BallisticProfile, TruingLogEntry, appendLog, atmoFromText, buildInput, chronoRows, num,
-  readProfile, scopeUnit, tempPoints, writeProfile,
+  AtmoText, BallisticProfile, TruingLogEntry, appendLog, atmoFromText, bcWarning, buildInput, chronoRows, num,
+  profileGaps, readProfile, scopeUnit, tempPoints, writeProfile,
 } from '../../lib/ballisticProfile';
 import { densityAltitude } from '../../lib/ballistics/atmosphere';
 import { Conditions, SolveInput, solveAt } from '../../lib/ballistics/solver';
@@ -22,6 +22,7 @@ import {
 } from '../../lib/ballistics/truing';
 import { parseShotView, ParsedXero, XeroShot } from '../../lib/importXero';
 import { LineChart } from '../../components/Chart';
+import { DragModelName } from '../../lib/ballistics/drag';
 
 type StepKey = 'mv' | 'bc' | 'drop';
 type EnvText = AtmoText & { wind: string; clock: string };
@@ -146,7 +147,10 @@ export default function Truing() {
         />
 
         {!input && step !== 'mv' && (
-          <Note tone="warn">This load needs a muzzle velocity (step 1) and a BC (Ballistics tab) before this step can calculate.</Note>
+          <Note tone="warn">{missingNote(profile)}</Note>
+        )}
+        {!(profile.bc > 0) && step !== 'mv' && (
+          <BcEntry profile={profile} weightGr={profile.weightGr} diameterIn={profile.diameterIn} saving={saving} onSave={save} />
         )}
 
         {step === 'mv' && <MvStep load={load} profile={profile} input={input} unit={unit} saving={saving} onSave={save} />}
@@ -165,6 +169,38 @@ export default function Truing() {
           </>
         )}
       </ScrollView>
+    </>
+  );
+}
+
+function missingNote(p: BallisticProfile): string {
+  const gaps = profileGaps(p);
+  if (gaps.length === 2) return 'This load needs a muzzle velocity (step 1) and a BC (below) before this step can calculate.';
+  if (gaps[0] === 'BC') return 'This load needs a BC before this step can calculate. Enter the published number from the box or the maker\'s site below.';
+  return 'This load needs a muzzle velocity (step 1) before this step can calculate.';
+}
+
+// Starting BC when the load has none yet: the published G1 or G7 number.
+function BcEntry({ profile, weightGr, diameterIn, saving, onSave }: {
+  profile: BallisticProfile; weightGr?: number; diameterIn?: number; saving: boolean; onSave: SaveFn;
+}) {
+  const [bc, setBc] = useState('');
+  const [model, setModel] = useState<DragModelName>(profile.model ?? 'G7');
+  const v = num(bc);
+  const warn = v ? bcWarning(model, v, weightGr, diameterIn) : null;
+  return (
+    <>
+      <Text style={commonStyles.sectionTitle}>Published BC</Text>
+      <Segment options={[{ value: 'G7', label: 'G7' }, { value: 'G1', label: 'G1' }]} value={model} onChange={setModel} />
+      <Row>
+        <Field label={`BC (${model})`} value={bc} onChange={setBc} placeholder={model === 'G7' ? '0.330' : '0.650'} />
+      </Row>
+      {warn ? <Note tone="warn">{warn}</Note> : null}
+      <Button
+        label={saving ? 'Saving…' : 'Save BC'}
+        disabled={saving || !(v && v > 0 && v < 2)}
+        onPress={() => v && onSave({ ...profile, model, bc: v, bcMeasured: false }, 'bc', `${model} BC ${v} entered`)}
+      />
     </>
   );
 }
