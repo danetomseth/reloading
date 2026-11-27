@@ -6,6 +6,7 @@ import {
   POWDERS, Bullet, bulletDiameters, bulletsForDiameter, diameterLabel,
   suggestDiameter, computeSD,
 } from '../lib/reloadData';
+import { ManualCartridge, ManualBullet, ManualRow, points, range } from '../lib/manualData';
 
 // ── Powder: text input with a filterable dropdown (still free-text) ───────────
 export function PowderInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
@@ -92,6 +93,68 @@ export function BulletLibrary({ caliber, onPick }: { caliber?: string; onPick: (
   );
 }
 
+// ── Manual data: published charges for this cartridge + bullet ───────────────
+export function ManualDataCard({ cartridge: c, bullet: b, row, charge, onPowder, onCharge, onCaseData, onLadder }: {
+  cartridge: ManualCartridge; bullet: ManualBullet; row: ManualRow | null; charge?: string;
+  onPowder: (p: string) => void; onCharge: (c: string) => void; onCaseData: () => void; onLadder: () => void;
+}) {
+  const rg = row ? range(b, row) : null;
+  const cur = parseFloat(charge || '');
+  const over = rg != null && !/\d\s*[-–]\s*\d/.test(charge || '') && cur > rg.max.charge;
+  const spec = [c.barrel && `${c.barrel} barrel`, c.primer, c.case && `${c.case} brass`, b.col && `COL ${b.col.toFixed(3)}"`].filter(Boolean).join(' · ');
+
+  return (
+    <View style={styles.md}>
+      <View style={styles.libHead}>
+        <Ionicons name="book-outline" size={16} color={C.accent} />
+        <Text style={styles.libTitle}>{c.source} · {c.name}</Text>
+      </View>
+      <Text style={styles.mdSub}>{b.weight} gr {b.mfr} {b.model}{spec ? `  ·  ${spec}` : ''}</Text>
+
+      {row && rg ? (
+        <>
+          <Text style={styles.mdRange}>
+            {row.powder}: start {rg.start.charge.toFixed(1)} gr ({rg.start.velocity} fps), max {rg.max.charge.toFixed(1)} gr ({rg.max.velocity} fps)
+          </Text>
+          <View style={styles.mdChips}>
+            {points(b, row).map((p, i, all) => {
+              const isMax = i === all.length - 1;
+              return (
+                <TouchableOpacity key={p.velocity} style={[styles.mdChip, isMax && styles.mdChipMax]} onPress={() => onCharge(p.charge.toFixed(1))}>
+                  <Text style={[styles.mdChipGr, isMax && { color: C.red }]}>{p.charge.toFixed(1)}</Text>
+                  <Text style={styles.mdChipFps}>{isMax ? `MAX · ${p.velocity}` : p.velocity}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          {over && <Text style={styles.mdWarn}>{charge} gr is above the published max of {rg.max.charge.toFixed(1)} gr.</Text>}
+          <View style={styles.mdBtns}>
+            <TouchableOpacity style={styles.mdBtn} onPress={onLadder}><Text style={styles.mdBtnText}>Plan ladder start→max</Text></TouchableOpacity>
+            <TouchableOpacity style={styles.mdBtn} onPress={onCaseData}><Text style={styles.mdBtnText}>Fill case data</Text></TouchableOpacity>
+          </View>
+        </>
+      ) : (
+        <>
+          <Text style={styles.mdHint}>Pick a powder from this manual:</Text>
+          {b.rows.map(r => {
+            const x = range(b, r);
+            return (
+              <TouchableOpacity key={r.powder} style={styles.bRow} onPress={() => onPowder(r.powder)}>
+                <Text style={[styles.bName, { flex: 1 }]}>{r.powder}</Text>
+                {x && <Text style={styles.bSpec}>{x.start.charge.toFixed(1)}–{x.max.charge.toFixed(1)} gr · to {x.max.velocity} fps</Text>}
+              </TouchableOpacity>
+            );
+          })}
+          <View style={styles.mdBtns}>
+            <TouchableOpacity style={styles.mdBtn} onPress={onCaseData}><Text style={styles.mdBtnText}>Fill case data</Text></TouchableOpacity>
+          </View>
+        </>
+      )}
+      <Text style={styles.mdFoot}>Tested in a {c.testRifle?.toLowerCase() || 'test rifle'}. Start low and work up; your rifle may reach pressure before the listed max.</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   row:        { flexDirection: 'row', alignItems: 'center' },
   chev:       { paddingHorizontal: 8, paddingVertical: 8, marginLeft: 4 },
@@ -109,4 +172,19 @@ const styles = StyleSheet.create({
   bRow:       { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderTopWidth: 1, borderTopColor: C.border },
   bName:      { color: C.text, fontSize: 14, fontFamily: F.semibold },
   bSpec:      { fontFamily: F.regular, color: C.textSoft, fontSize: 12, marginTop: 2 },
+
+  md:         { backgroundColor: C.surface, borderWidth: 1, borderColor: C.borderHi, borderRadius: 8, padding: 12, marginBottom: 12 },
+  mdSub:      { fontFamily: F.regular, color: C.textSoft, fontSize: 12, marginTop: 4 },
+  mdRange:    { color: C.text, fontSize: 14, fontFamily: F.semibold, marginTop: 10 },
+  mdHint:     { fontFamily: F.regular, color: C.textSoft, fontSize: 13, marginTop: 10, marginBottom: 2 },
+  mdChips:    { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
+  mdChip:     { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: C.border, backgroundColor: C.bg, alignItems: 'center' },
+  mdChipMax:  { borderColor: C.red, backgroundColor: C.red + '18' },
+  mdChipGr:   { color: C.text, fontSize: 14, fontFamily: F.bold, fontVariant: ['tabular-nums'] },
+  mdChipFps:  { fontFamily: F.regular, color: C.muted, fontSize: 11, marginTop: 1 },
+  mdWarn:     { color: C.red, fontSize: 13, fontFamily: F.semibold, marginTop: 8 },
+  mdBtns:     { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },
+  mdBtn:      { backgroundColor: C.accent + '22', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8 },
+  mdBtnText:  { color: C.accent, fontFamily: F.bold, fontSize: 13 },
+  mdFoot:     { fontFamily: F.regular, color: C.muted, fontSize: 11, marginTop: 10 },
 });

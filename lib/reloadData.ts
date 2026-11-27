@@ -17,7 +17,7 @@ export const POWDERS: string[] = [
   'Alliant Reloader 10x', 'ADI AR 2206H', 'ADI AR 2207', 'Hodgdon H335',
   'Vihtavuori N133', 'Accurate 2015', 'Hodgdon BL-C(2)', 'Shooters World Precision Rifle',
   'Alliant AR-Comp', 'ADI AR 2208', 'Accurate LT-30', 'Reload Swiss RS60',
-  'Somchem S243', 'Winchester 760', 'Accurate 2460', 'Hodgdon CFE 223',
+  'Somchem S243', 'Winchester 760', 'Accurate 2460', 'Hodgdon CFE 223', 'IMR 8133', 'Norma 217', 'Hodgdon US 869',
   'IMR 3031', 'Alliant Power Pro 4000-MR', 'Hodgdon H4895', 'IMR 4895',
   'Vihtavuori N135', 'Vihtavuori N550', 'Winchester 670', 'Norma 203-B',
   'Accurate 2700', 'Alliant Reloader 15', 'Maxam CSRB2', 'Lovex D072.5',
@@ -107,6 +107,10 @@ export const BULLETS: Bullet[] = [
   { mfr: 'Hornady', model: 'ELD-M',         weight: 147,  diameter: 0.264, bcG1: 0.697, bcG7: 0.351 },
   { mfr: 'Hornady', model: 'A-Tip',         weight: 153,  diameter: 0.264, bcG1: 0.704, bcG7: 0.355 },
   { mfr: 'Berger',  model: 'LRHT',          weight: 153.5, diameter: 0.264, bcG1: 0.694, bcG7: 0.356 },
+
+  // ── .308" · 30 cal (BCs from the Hornady 12th Edition manual pages) ──
+  { mfr: 'Hornady', model: 'ELD-X',         weight: 220,  diameter: 0.308, bcG1: 0.654, bcG7: 0.329 },
+  { mfr: 'Hornady', model: 'A-Tip Match',   weight: 250,  diameter: 0.308, bcG1: 0.878, bcG7: 0.442 },
 ];
 
 // ── diameter grouping + caliber → diameter mapping ────────────────────────────
@@ -115,6 +119,7 @@ export const diameterLabel = (d: number): string => ({
   0.243: '6mm · .243"',
   0.257: '25 cal · .257"',
   0.264: '6.5mm · .264"',
+  0.308: '30 cal · .308"',
 }[d] || `.${Math.round(d * 1000)}"`);
 
 // unique diameters present in the library, ascending
@@ -130,6 +135,7 @@ const NUM_TO_DIA: Record<string, number> = {
   '6': 0.243, '243': 0.243, '244': 0.243,
   '25': 0.257, '257': 0.257,
   '6.5': 0.264, '65': 0.264, '260': 0.264, '264': 0.264,
+  '30': 0.308, '300': 0.308, '308': 0.308,
 };
 
 // best-guess diameter for a free-text caliber like "25CM", "22 Creedmoor", ".257".

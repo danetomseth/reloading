@@ -8,7 +8,8 @@ import { File } from 'expo-file-system';
 import { db, Load, Rifle, Group, uid, parseLoadIds } from '../../lib/supabase';
 import { cachedList, cachedGet } from '../../lib/cache';
 import { C, Type, commonStyles, statusColor, F } from '../../lib/theme';
-import { PowderInput, BulletLibrary } from '../../components/ReloadPickers';
+import { PowderInput, BulletLibrary, ManualDataCard } from '../../components/ReloadPickers';
+import { findBullet, findCartridge, findRow, ladderPlan } from '../../lib/manualData';
 import { diameterLabel } from '../../lib/reloadData';
 import { LAST_RIFLE_KEY, assignCodes, nextLoadId, previousIds, rifleOf } from '../../lib/loadIds';
 import { recommend, Suggestion } from '../../lib/recommend';
@@ -373,6 +374,36 @@ function LoadEditor({ isNew, initial, initialGroups, groupInit, rifles, loads, g
   const prevIds = previousIds(form);
   const rec = useMemo(() => recommend(form, rifle, loads), [form, rifle, loads]);
 
+  // published manual data for this cartridge + bullet weight, and the row for the chosen powder
+  const manual = useMemo(() => {
+    const c = findCartridge(form.caliber, form.rifle, rifle?.caliber, rifle?.name);
+    const b = c && findBullet(c, num(form.bullet_wt), form.bullet);
+    return c && b ? { c, b, row: findRow(b, form.powder) } : null;
+  }, [form.caliber, form.rifle, form.bullet_wt, form.bullet, form.powder, rifle]);
+
+  const fillCaseData = () => {
+    if (!manual) return;
+    const { c, b } = manual;
+    setForm(p => ({
+      ...p,
+      primer: c.primer || p.primer,
+      brass: c.case || p.brass,
+      trim_len: c.trimLen != null ? c.trimLen.toFixed(3) : p.trim_len,
+      max_overall_coal: b.col != null ? b.col.toFixed(3) : p.max_overall_coal,
+      bullet_bc: p.bullet_bc || (b.bcG1 != null ? String(b.bcG1) : ''),
+    }));
+    if (b.col != null) setCoalOn(p => ({ ...p, max_overall_coal: true }));
+  };
+
+  const planManualLadder = () => {
+    const pl = manual?.row && ladderPlan(manual.b, manual.row);
+    if (!pl) return;
+    const s = num(pl.start)!, step = num(pl.step)!, n = Number(pl.count);
+    setPlan(pl);
+    setLadderOn(true);
+    setLadder(Array.from({ length: n }, (_, i) => ({ id: uid(), charge: (s + i * step).toFixed(1), velocity: '', group_size: '' })));
+  };
+
   // a COAL ref shows if toggled on, or (before any toggle) if it already has a value
   const coalChecked = (key: keyof Load) => coalOn[key] ?? (String(form[key] || '') !== '');
   const toggleCoal = (key: keyof Load) => {
@@ -536,6 +567,12 @@ function LoadEditor({ isNew, initial, initialGroups, groupInit, rifles, loads, g
         <View style={{ marginTop: 18 }}>
           <PowderInput value={form.powder || ''} onChange={tf('powder')} />
         </View>
+        {manual && (
+          <ManualDataCard
+            cartridge={manual.c} bullet={manual.b} row={manual.row} charge={form.charge}
+            onPowder={tf('powder')} onCharge={tf('charge')} onCaseData={fillCaseData} onLadder={planManualLadder}
+          />
+        )}
         <Section style={{ marginTop: 0 }}>
           <InputItem label="Charge" value={form.charge || ''} onChange={tf('charge')} unit="gr" />
           <InputItem label="Primer" value={form.primer || ''} onChange={tf('primer')} keyboard="default" autoCapitalize="words" />
